@@ -1,0 +1,22 @@
+/* # Custom CSS Guidelines
+
+In our project, we follow a modular and organized approach to styling, primarily utilizing Tailwind CSS and Shadcn UI. However, there may be scenarios where you need to apply custom styles that are not covered by these libraries.
+
+To maintain consistency and ensure a clear structure, we have a designated `styles` folder. If you find the need for custom CSS, follow these guidelines:
+
+1. **Create a Custom CSS File:**
+   - Inside the `styles` folder, create a new CSS file for your custom styles. Choose a meaningful name that reflects the purpose of the styles.
+
+2. **Use Descriptive Class Names:**
+   - When adding custom styles, use descriptive class names to make it easy for other developers to understand the purpose and scope of each style rule.
+
+3. **Comment Your Code:**
+   - Include comments in your CSS file to provide context and explain the reasoning behind certain style decisions. This helps other developers understand the purpose of the styles and any considerations they need to be aware of.
+
+4. **Keep it Modular:**
+   - Whenever possible, keep your custom styles modular. If the styles are specific to a component or page, consider organizing them within the appropriate subdirectories in the `styles` folder.
+
+5. **Prioritize Tailwind and Shadcn:**
+   - Before resorting to custom styles, check if the desired styling can be achieved using Tailwind CSS or Shadcn UI. These libraries provide a wide range of utility classes and components, promoting consistency across the project.
+
+*/

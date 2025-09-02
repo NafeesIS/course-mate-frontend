@@ -1,0 +1,97 @@
+/* For mobile screens */
+@media only screen and (max-width: 767px) {
+  #essential-cards {
+    display: grid;
+    grid-template-rows: repeat(4, 620px); /* Adjust for mobile */
+    gap: 0.5vw; /* Adjust for mobile */
+    padding-bottom: calc(4 * 1em); /* Adjust for mobile */
+    margin-bottom: 190px; /* Adjust for mobile */
+  }
+  .essential-card:nth-child(1) {
+    padding-top: calc(1 * 0.5em);
+  }
+  .essential-card:nth-child(2) {
+    padding-top: calc(2 * 2.2em);
+  }
+  .essential-card:nth-child(3) {
+    padding-top: calc(3 * 2.8em);
+  }
+  .essential-card:nth-child(4) {
+    padding-top: calc(4 * 3em);
+  }
+}
+
+/* For tablet screens */
+@media only screen and (min-width: 768px) and (max-width: 1023px) {
+  #essential-cards {
+    display: grid;
+    grid-template-rows: repeat(4, 820px); /* Adjust for tablet */
+    gap: 0.8vw; /* Adjust for tablet */
+    padding-bottom: calc(4 * 2.3em); /* Adjust for tablet */
+    margin-bottom: 60px; /* Adjust for tablet */
+  }
+  .essential-card:nth-child(1) {
+    padding-top: calc(1 * 2.5em);
+  }
+  .essential-card:nth-child(2) {
+    padding-top: calc(2 * 2.5em);
+  }
+  .essential-card:nth-child(3) {
+    padding-top: calc(3 * 2.5em);
+  }
+  .essential-card:nth-child(4) {
+    padding-top: calc(4 * 2.5em);
+  }
+}
+
+/* For large screens */
+@media only screen and (min-width: 1024px) and (max-width: 1279px) {
+  #essential-cards {
+    display: grid;
+    /* grid-template-columns: 1fr; */
+    grid-template-rows: repeat(4, 400px); /* Adjust as needed */
+    gap: 1vw; /* Adjust as needed */
+    padding-bottom: calc(4 * 3.5em); /* Adjust as needed */
+    margin-bottom: 30px; /* Adjust as needed */
+  }
+  .essential-card:nth-child(1) {
+    padding-top: calc(1 * 1em);
+  }
+  .essential-card:nth-child(2) {
+    padding-top: calc(2 * 1.5em);
+  }
+  .essential-card:nth-child(3) {
+    padding-top: calc(3 * 1.8em);
+  }
+  .essential-card:nth-child(4) {
+    padding-top: calc(4 * 1.9em);
+  }
+}
+
+/* For extra-large screens */
+@media only screen and (min-width: 1280px) {
+  #essential-cards {
+    display: grid;
+    grid-template-rows: repeat(4, 410px); /* Adjust for extra-large */
+    gap: 1.2vw; /* Adjust for extra-large */
+    padding-bottom: calc(4 * 1.8em); /* Adjust for extra-large */
+    margin-bottom: 130px; /* Adjust for extra-large */
+  }
+  .essential-card:nth-child(1) {
+    padding-top: calc(1 * 1em);
+  }
+  .essential-card:nth-child(2) {
+    padding-top: calc(2 * 1.5em);
+  }
+  .essential-card:nth-child(3) {
+    padding-top: calc(3 * 1.8em);
+  }
+  .essential-card:nth-child(4) {
+    padding-top: calc(4 * 1.9em);
+  }
+}
+
+.essential-card {
+  position: sticky;
+  top: 0;
+}

@@ -1,0 +1,71 @@
+name: Deploy via SST to AWS
+
+on:
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+  push:
+    branches:
+      - main
+  # pull_request:
+  #   branches:
+  #     - main
+  # here mention any speicific paths where if changes happen then you want to trigger the workflow
+  # paths:
+  #   - '.github/workflows/main.yml'
+  #   - 'src/**'
+  #   - '*.json'
+  #   - '*.ts'
+
+jobs:
+  deploy:
+    runs-on: [ubuntu-latest-8core]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Cache Next.js Build
+        uses: actions/cache@v3
+        with:
+          path: |
+            .next/cache
+            .open-next/
+            .sst
+          key: cache-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: cache-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install Project Dependencies
+        run: npm install
+
+      # ▶ Create .env.local  ────────────────────────
+      # Add only the variables your *frontend* really needs.
+      # Anything that does **not** start with NEXT_PUBLIC_ will be tree‐shaken
+      # by Next.js at build time and never reach the browser.
+      # - name: Create .env.local for Next.js
+      #   run: |
+      #     cat <<'EOF' > .env.production
+      #     NEXT_PUBLIC_THRIVESTACK_API_KEY=${{ secrets.NEXT_PUBLIC_THRIVESTACK_API_KEY }}
+      #     EOF
+
+      - name: Set Environment Variables from Actions env
+        run: |
+          echo "NEXT_PUBLIC_SITEMAP_ENV=${{ vars.NEXT_PUBLIC_SITEMAP_ENV }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPERTOKENS_JWKS_URI=${{ vars.NEXT_PUBLIC_SUPERTOKENS_JWKS_URI }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_DOC_VIEWER_SECRET_KEY=${{ vars.NEXT_PUBLIC_DOC_VIEWER_SECRET_KEY }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_THRIVESTACK_API_KEY=${{ vars.NEXT_PUBLIC_THRIVESTACK_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Install AWS Creds
+        run: |
+          mkdir -p ~/.aws
+          echo "[default]" > ~/.aws/credentials
+          echo "aws_access_key_id=${{secrets.AWS_ACCESS_KEY_ID}}" >> ~/.aws/credentials
+          echo "aws_secret_access_key=${{secrets.AWS_SECRET_ACCESS_KEY}}" >> ~/.aws/credentials
+
+      # - name: Set SST Config secrets
+      #   run: npx sst secrets set COMMITT_SHA '${{ github.sha }}' --stage production
+      - name: Deploy to AWS with SST
+        run: npm run deploy
+        # run: npx sst remove --stage production
+
+      - name: Cleanup AWS Creds
+        run: rm -rf ~/.aws
