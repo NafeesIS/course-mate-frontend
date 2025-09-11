@@ -34,56 +34,56 @@ export const frontendConfig = (): SuperTokensConfig => {
         signInAndUpFeature: {
           signUpForm: {
             formFields: [
-              {
-                id: "agreeToTerms",
-                label: "",
-                optional: false,
-                nonOptionalErrorMsg: "Accept our terms and privacy policy to continue",
-                validate: async (value) => {
-                  if (value !== "true") {
-                    return "Accept our terms and privacy policy to continue";
-                  }
-                },
-                inputComponent: ({ name, value, onChange }) =>
-                  React.createElement(
-                    "div",
-                    { style: { display: "flex", fontSize: "13px" } },
-                    React.createElement("input", {
-                      type: "checkbox",
-                      name,
-                      checked: value === "true",
-                      onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange(e.target.checked.toString()),
-                      style: { cursor: "pointer" },
-                    }),
-                    React.createElement(
-                      "span",
-                      { style: { marginLeft: 5 } },
-                      "I agree to the",
-                      React.createElement(
-                        "a",
-                        {
-                          href: "/terms-and-conditions",
-                          "data-supertokens": "link",
-                          target: "_blank",
-                          style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
-                        },
-                        "Terms"
-                      ),
-                      " & ",
-                      React.createElement(
-                        "a",
-                        {
-                          href: "/privacy-policy",
-                          "data-supertokens": "link",
-                          target: "_blank",
-                          style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
-                        },
-                        "Privacy Policy"
-                      )
-                    )
-                  ),
-              },
+              // {
+              //   id: "agreeToTerms",
+              //   label: "",
+              //   optional: false,
+              //   nonOptionalErrorMsg: "Accept our terms and privacy policy to continue",
+              //   validate: async (value) => {
+              //     if (value !== "true") {
+              //       return "Accept our terms and privacy policy to continue";
+              //     }
+              //   },
+              //   inputComponent: ({ name, value, onChange }) =>
+              //     React.createElement(
+              //       "div",
+              //       { style: { display: "flex", fontSize: "13px" } },
+              //       React.createElement("input", {
+              //         type: "checkbox",
+              //         name,
+              //         checked: value === "true",
+              //         onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+              //           onChange(e.target.checked.toString()),
+              //         style: { cursor: "pointer" },
+              //       }),
+              //       React.createElement(
+              //         "span",
+              //         { style: { marginLeft: 5 } },
+              //         "I agree to the",
+              //         React.createElement(
+              //           "a",
+              //           {
+              //             href: "/terms-and-conditions",
+              //             "data-supertokens": "link",
+              //             target: "_blank",
+              //             style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
+              //           },
+              //           "Terms"
+              //         ),
+              //         " & ",
+              //         React.createElement(
+              //           "a",
+              //           {
+              //             href: "/privacy-policy",
+              //             "data-supertokens": "link",
+              //             target: "_blank",
+              //             style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
+              //           },
+              //           "Privacy Policy"
+              //         )
+              //       )
+              //     ),
+              // },
             ],
           },
         },
