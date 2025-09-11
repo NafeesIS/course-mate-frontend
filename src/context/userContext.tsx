@@ -1,3 +1,4 @@
+// src/context/userContext.tsx
 "use client";
 
 import { getUserInfo } from "@/services/user";
@@ -5,11 +6,11 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSessionContext } from "supertokens-auth-react/recipe/session";
 
 type User = {
-  _id: string;
+  id: string;
   email: string;
-  supertokensId: string;
-  role: "admin" | "user";
-  createdAt: string;
+  firstName?: string;
+  lastName?: string;
+  role?: string;
 };
 
 interface UserContextType {
@@ -23,10 +24,10 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const  sessionContext= useSessionContext();
+  const session = useSessionContext();
 
   const fetchUser = async () => {
-    if (!sessionContext.loading && !sessionContext.doesSessionExist) {
+    if (!session.loading && !session.doesSessionExist) {
       setUser(null);
       setLoading(false);
       return;
@@ -34,14 +35,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     setLoading(true);
     try {
-      const response = await getUserInfo();
-      if (response.success) {
-        setUser(response.data);
-      } else {
-        setUser(null);
-      }
+      const data = await getUserInfo();
+      setUser(data);
     } catch (error) {
-      console.error("Failed to load user:", error);
+      console.error("Failed to load user", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -49,13 +46,13 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    if (!sessionContext.loading) {
+    if (!session.loading) {
       fetchUser();
     }
-  }, [sessionContext]);
+  }, [session]);
 
   return (
-    <UserContext.Provider value={{ user, loading, refreshUser: fetchUser }}>
+    <UserContext.Provider value={{ user, loading: loading || session.loading, refreshUser: fetchUser }}>
       {children}
     </UserContext.Provider>
   );
