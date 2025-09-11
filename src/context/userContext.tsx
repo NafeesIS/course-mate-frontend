@@ -2,13 +2,14 @@
 
 import { getUserInfo } from "@/services/user";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useSessionContext } from "supertokens-auth-react/recipe/session";
 
 type User = {
-  id: string;
+  _id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  role?: string;
+  supertokensId: string;
+  role: "admin" | "user";
+  createdAt: string;
 };
 
 interface UserContextType {
@@ -22,14 +23,25 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const  sessionContext= useSessionContext();
 
   const fetchUser = async () => {
+    if (!sessionContext.loading && !sessionContext.doesSessionExist) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await getUserInfo();
-      setUser(data);
+      const response = await getUserInfo();
+      if (response.success) {
+        setUser(response.data);
+      } else {
+        setUser(null);
+      }
     } catch (error) {
-      console.error("Failed to load user", error);
+      console.error("Failed to load user:", error);
       setUser(null);
     } finally {
       setLoading(false);
@@ -37,8 +49,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (!sessionContext.loading) {
+      fetchUser();
+    }
+  }, [sessionContext]);
 
   return (
     <UserContext.Provider value={{ user, loading, refreshUser: fetchUser }}>
@@ -48,7 +62,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useUser = () => {
-  const ctx = useContext(UserContext); // ✅ use the variable directly
+  const ctx = useContext(UserContext);
   if (!ctx) throw new Error("useUser must be used inside UserProvider");
   return ctx;
 };

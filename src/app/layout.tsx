@@ -1,17 +1,29 @@
 "use client";
 
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Navbar from "@/component/navbar";
-import "../config/supertokens";
+import { UserProvider } from "@/context/userContext";
+import { setRouter } from "@/config/supertokens";
 import { SuperTokensWrapper } from "supertokens-auth-react";
-// import Navbar from "../components/Navbar";
+import "./globals.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setRouter(router, pathname);
+  }, [router, pathname]);
+
   return (
     <html lang="en">
       <body>
         <SuperTokensWrapper>
-          <Navbar />
-          {children}
+          <UserProvider>
+            <Navbar />
+            {children}
+          </UserProvider>
         </SuperTokensWrapper>
       </body>
     </html>

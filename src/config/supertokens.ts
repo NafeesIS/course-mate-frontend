@@ -7,8 +7,7 @@ import Session from "supertokens-auth-react/recipe/session";
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import ThirdPartyReact from "supertokens-auth-react/recipe/thirdparty";
 import EmailVerification from "supertokens-auth-react/recipe/emailverification";
-
-import { appInfo } from "../config/appinfo";
+import { appInfo } from "./appinfo";
 
 const routerInfo: { router?: ReturnType<typeof useRouter>; pathName?: string } = {};
 
@@ -21,14 +20,12 @@ export const frontendConfig = (): SuperTokensConfig => {
   return {
     appInfo,
     recipeList: [
-      // --- Third Party Login ---
       ThirdPartyReact.init({
         signInAndUpFeature: {
           providers: [ThirdPartyReact.Google.init()],
         },
       }),
 
-      // --- Email/Password Login ---
       EmailPassword.init({
         signInAndUpFeature: {
           signUpForm: {
@@ -42,30 +39,30 @@ export const frontendConfig = (): SuperTokensConfig => {
                   if (value !== "true") {
                     return "Accept our terms and privacy policy to continue";
                   }
+                  return undefined;
                 },
                 inputComponent: ({ name, value, onChange }) =>
                   React.createElement(
                     "div",
-                    { style: { display: "flex", fontSize: "13px" } },
+                    { style: { display: "flex", fontSize: "13px", alignItems: "center" } },
                     React.createElement("input", {
                       type: "checkbox",
                       name,
                       checked: value === "true",
                       onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
                         onChange(e.target.checked.toString()),
-                      style: { cursor: "pointer" },
+                      style: { cursor: "pointer", marginRight: "8px" },
                     }),
                     React.createElement(
                       "span",
-                      { style: { marginLeft: 5 } },
-                      "I agree to the",
+                      {},
+                      "I agree to the ",
                       React.createElement(
                         "a",
                         {
                           href: "/terms-and-conditions",
-                          "data-supertokens": "link",
                           target: "_blank",
-                          style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
+                          style: { color: "#3b82f6", textDecoration: "underline" },
                         },
                         "Terms"
                       ),
@@ -74,9 +71,8 @@ export const frontendConfig = (): SuperTokensConfig => {
                         "a",
                         {
                           href: "/privacy-policy",
-                          "data-supertokens": "link",
                           target: "_blank",
-                          style: { color: "hsl(206,100%,40%)", textDecoration: "underline" },
+                          style: { color: "#3b82f6", textDecoration: "underline" },
                         },
                         "Privacy Policy"
                       )
@@ -88,70 +84,63 @@ export const frontendConfig = (): SuperTokensConfig => {
         },
       }),
 
-      // --- Email Verification ---
       EmailVerification.init({
         mode: "REQUIRED",
       }),
 
-      // --- Session Handling ---
       Session.init({
         tokenTransferMethod: "header",
       }),
     ],
 
-    // --- Redirect Logic ---
     getRedirectionURL: async (context) => {
       if (context.action === "SUCCESS" && context.newSessionCreated) {
-
-
         if (context.createdNewUser) {
-          console.log("user signed up");
-
+          console.log("User signed up");
+          return "/dashboard";
         } else {
-          console.log("user signed in");
-
-          if (typeof window !== "undefined" && (window as any).thriveStack) {
-            (window as any).thriveStack.track([
-              {
-                event_name: "signed_in",
-                properties: { user_email: userEmail, user_name: userName },
-                user_id: userId,
-                timestamp: new Date().toISOString(),
-              },
-            ]);
-          }
-
-          return urlHistory;
+          console.log("User signed in");
+          return "/dashboard";
         }
       }
       return undefined;
     },
 
-    // --- Router-aware redirects ---
     windowHandler: (original) => ({
       ...original,
       location: {
         ...original.location,
-        getPathName: () => routerInfo.pathName!,
-        assign: (url) => routerInfo.router!.push(url.toString()),
-        setHref: (url) => routerInfo.router!.push(url.toString()),
+        getPathName: () => routerInfo.pathName || window.location.pathname,
+        assign: (url) => {
+          if (routerInfo.router) {
+            routerInfo.router.push(url.toString());
+          } else {
+            window.location.assign(url);
+          }
+        },
+        setHref: (url) => {
+          if (routerInfo.router) {
+            routerInfo.router.push(url.toString());
+          } else {
+            window.location.href = url.toString();
+          }
+        },
       },
     }),
 
-    // --- Custom CSS overrides ---
     style: `
       [data-supertokens~='superTokensBranding'] {
         display: none !important;
       }
       [data-supertokens~=container] {
-        font-family: var(--font-open-sans), sans-serif;
+        font-family: system-ui, -apple-system, sans-serif;
       }
       [data-supertokens~=inputErrorMessage] {
         font-size: 12px;
       }
       @media (max-width: 480px) {
         [data-supertokens~=container] {
-          padding: 0;
+          padding: 16px;
         }
         [data-supertokens~=headerTitle] {
           font-size: 24px;
