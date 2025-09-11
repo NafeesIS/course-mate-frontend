@@ -1,65 +1,61 @@
-// src/context/userContext.tsx
 "use client";
 
-import { getUserInfo } from "@/services/user";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSessionContext } from "supertokens-auth-react/recipe/session";
 
 type User = {
-  id: string;
+  _id: string;
   email: string;
+  supertokensId: string;
+  role: string;
   firstName?: string;
   lastName?: string;
-  role?: string;
 };
 
 interface UserContextType {
   user: User | null;
   loading: boolean;
-  refreshUser: () => Promise<void>;
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const UserContext = createContext<UserContextType>({
+  user: null,
+  loading: true,
+});
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const session = useSessionContext();
 
-  const fetchUser = async () => {
-    if (!session.loading && !session.doesSessionExist) {
+  useEffect(() => {
+    if (session.loading) return;
+
+    if (!session.doesSessionExist) {
       setUser(null);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      const data = await getUserInfo();
-      setUser(data);
-    } catch (error) {
-      console.error("Failed to load user", error);
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Fetch user data
+    fetch("http://localhost:4000/auth/me", {
+      credentials: "include",
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        setUser(data.data);
+      }
+    })
+    .catch(console.error)
+    .finally(() => setLoading(false));
 
-  useEffect(() => {
-    if (!session.loading) {
-      fetchUser();
-    }
   }, [session]);
 
   return (
-    <UserContext.Provider value={{ user, loading: loading || session.loading, refreshUser: fetchUser }}>
+    <UserContext.Provider value={{ user, loading: loading || session.loading }}>
       {children}
     </UserContext.Provider>
   );
 };
 
-export const useUser = () => {
-  const ctx = useContext(UserContext);
-  if (!ctx) throw new Error("useUser must be used inside UserProvider");
-  return ctx;
-};
+export const useUser = () => useContext(UserContext);
