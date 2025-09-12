@@ -1,3 +1,4 @@
+// src/services/user.ts
 import { config } from '@/config';
 
 export interface User {

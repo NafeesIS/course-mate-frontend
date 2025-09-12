@@ -346,3 +346,143 @@ export async function getEnrolledCourses(): Promise<UserProgress[]> {
   const data: ApiResponse<UserProgress[]> = await response.json();
   return data.data;
 }
+
+// Get user's enrolled courses with progress
+export async function getUserEnrolledCoursesWithProgress(): Promise<(UserProgress & { course: Course })[]> {
+  const response = await fetch(`${config.API_URL}/courses/enrolled/progress`, {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch enrolled courses with progress: ${response.status}`);
+  }
+  
+  const data: ApiResponse<(UserProgress & { course: Course })[]> = await response.json();
+  return data.data;
+}
+
+// Upload PDF notes for lecture (if implementing file upload)
+export async function uploadLectureNotes(lectureId: string, files: File[]): Promise<string[]> {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('notes', file);
+  });
+
+  const response = await fetch(`${config.API_URL}/lectures/${lectureId}/notes`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload notes: ${response.status}`);
+  }
+
+  const data: ApiResponse<{ noteUrls: string[] }> = await response.json();
+  return data.data.noteUrls;
+}
+
+// Get lecture notes
+export async function getLectureNotes(lectureId: string): Promise<string[]> {
+  const response = await fetch(`${config.API_URL}/lectures/${lectureId}/notes`, {
+    credentials: 'include',
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch lecture notes: ${response.status}`);
+  }
+  
+  const data: ApiResponse<{ noteUrls: string[] }> = await response.json();
+  return data.data.noteUrls;
+}
+
+// Get course with full structure (modules + lectures)
+export async function getCourseWithStructure(courseId: string): Promise<Course & { modules: (Module & { lectures: Lecture[] })[] }> {
+  try {
+    // Fetch course details
+    const course = await getCourse(courseId);
+    
+    // Fetch modules
+    const modules = await getModulesByCourse(courseId);
+    
+    // Fetch lectures for each module
+    const modulesWithLectures = await Promise.all(
+      modules.map(async (module) => {
+        try {
+          const lectures = await getLecturesByModule(module._id);
+          return { ...module, lectures };
+        } catch (error) {
+          console.error(`Failed to fetch lectures for module ${module._id}:`, error);
+          return { ...module, lectures: [] };
+        }
+      })
+    );
+    
+    return { ...course, modules: modulesWithLectures };
+  } catch (error) {
+    console.error('Failed to fetch course structure:', error);
+    throw error;
+  }
+}
+
+// Check if user can access specific lecture (unlock logic)
+export function isLectureUnlocked(
+  lecture: Lecture, 
+  allLectures: Lecture[], 
+  completedLectures: string[]
+): boolean {
+  // First lecture of course is always unlocked
+  if (allLectures.length > 0 && allLectures[0]._id === lecture._id) {
+    return true;
+  }
+  
+  // Find lecture index
+  const lectureIndex = allLectures.findIndex(l => l._id === lecture._id);
+  if (lectureIndex === -1) return false;
+  
+  // Check if all previous lectures are completed
+  for (let i = 0; i < lectureIndex; i++) {
+    if (!completedLectures.includes(allLectures[i]._id)) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// Get next lecture in sequence
+export function getNextLecture(currentLectureId: string, allLectures: Lecture[]): Lecture | null {
+  const currentIndex = allLectures.findIndex(l => l._id === currentLectureId);
+  if (currentIndex === -1 || currentIndex === allLectures.length - 1) {
+    return null;
+  }
+  return allLectures[currentIndex + 1];
+}
+
+// Get previous lecture in sequence
+export function getPreviousLecture(currentLectureId: string, allLectures: Lecture[]): Lecture | null {
+  const currentIndex = allLectures.findIndex(l => l._id === currentLectureId);
+  if (currentIndex <= 0) {
+    return null;
+  }
+  return allLectures[currentIndex - 1];
+}
+
+// Update progress with current lecture
+export async function updateCurrentLecture(courseId: string, lectureId: string): Promise<UserProgress> {
+  const response = await fetch(`${config.API_URL}/lectures/${courseId}/current-lecture`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ lectureId }),
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to update current lecture: ${response.status}`);
+  }
+  
+  const data: ApiResponse<UserProgress> = await response.json();
+  return data.data;
+}
