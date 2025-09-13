@@ -148,7 +148,7 @@ export const frontendConfig = () => {
         tokenTransferMethod: "cookie",
       }),
        EmailVerification.init({
-        mode: "REQUIRED", // or "OPTIONAL"
+        mode: "OPTIONAL", // or "OPTIONAL"
       }),
     ],
     

@@ -26,7 +26,7 @@ function EditCoursePage() {
   });
 
   useEffect(() => {
-    if (user && user.role !== "admin") {
+    if (user && !user?.roles?.includes('admin')) {
       router.push("/dashboard");
       return;
     }
@@ -56,7 +56,7 @@ function EditCoursePage() {
     }
   };
 
-  if (user && user.role !== "admin") {
+  if (user && !user?.roles?.includes('admin')) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">

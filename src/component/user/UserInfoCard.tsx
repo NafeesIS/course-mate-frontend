@@ -14,7 +14,7 @@ export default function UserInfoCard() {
       <h2 className="text-lg font-bold">User Info</h2>
       <p><strong>Email:</strong> {user.email}</p>
       <p><strong>Name:</strong> {user.firstName} {user.lastName}</p>
-      <p><strong>Role:</strong> {user.role || "User"}</p>
+      <p><strong>Role:</strong> {user?.roles?.includes('admin') ? "Admin" : "User"}</p>
     </div>
   );
 }

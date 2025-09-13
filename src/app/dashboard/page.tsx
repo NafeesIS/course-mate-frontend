@@ -9,13 +9,13 @@ export default function DashboardRoot() {
   const { user, loading } = useUser();
   const sessionContext = useSessionContext();
   const router = useRouter();
-
+console.log({user});
   useEffect(() => {
     if (!sessionContext.loading && !loading) {
       if (!sessionContext.doesSessionExist) {
         router.push("/auth");
       } else if (user) {
-        if (user.role === "admin") {
+        if (user?.roles?.includes('admin')) {
           router.push("/dashboard/admin");
         } else {
           router.push("/dashboard/user");

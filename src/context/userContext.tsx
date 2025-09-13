@@ -204,7 +204,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (config.IS_DEVELOPMENT) {
       console.log('UserContext State:', {
-        user: user ? { id: user._id, email: user.email, role: user.role } : null,
+        user: user ? { id: user._id, email: user.email, role: user?.roles?.includes('admin') ? 'admin' : 'user'  } : null,
         loading,
         error,
        sessionExists: !sessionContext.loading ? sessionContext.doesSessionExist : null,

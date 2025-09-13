@@ -5,7 +5,7 @@ export interface User {
   _id: string;
   email: string;
   supertokensId: string;
-  role: 'admin' | 'user';
+  roles: string[];
   firstName?: string;
   lastName?: string;
   createdAt: string;
@@ -70,7 +70,7 @@ export async function updateUserProfile(updates: {
 
 // Helper functions
 export function isAdmin(user: User | null): boolean {
-  return user?.role === 'admin';
+  return user?.roles?.includes('admin') ? true : false;
 }
 
 export function getUserDisplayName(user: User | null): string {
