@@ -385,9 +385,9 @@ export default function CourseDetailsPage() {
                                   Lecture {lecture.lectureNumber}:{" "}
                                   {lecture.title}
                                 </h4>
-                                <p className="text-gray-600 text-sm line-clamp-2">
+                                {/* <p className="text-gray-600 text-sm line-clamp-2">
                                   {lecture.content}
-                                </p>
+                                </p> */}
                               </div>
 
                               <div className="flex items-center gap-2">

@@ -1,6 +1,12 @@
 // src/services/course.ts
 import { config } from '@/config';
 
+/**
+ * Course Service API
+ * Handles all course-related API calls with proper error handling
+ * Matches backend API endpoints and data structures
+ */
+
 export interface Course {
   _id: string;
   title: string;
@@ -8,6 +14,7 @@ export interface Course {
   price: number;
   thumbnail: string;
   createdBy: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -17,20 +24,26 @@ export interface Module {
   title: string;
   moduleNumber: number;
   courseId: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  lectureCount?: number;
 }
 
 export interface Lecture {
   _id: string;
   title: string;
   lectureNumber: number;
-  content: string;
-  videoUrl?: string;
+  videoUrl: string;
+  pdfNotes: string[];
   moduleId: string;
   courseId: string;
+  isActive: boolean;
+  duration?: number;
   createdAt: string;
   updatedAt: string;
+  isUnlocked?: boolean;
+  isCompleted?: boolean;
 }
 
 export interface UserProgress {
@@ -42,6 +55,7 @@ export interface UserProgress {
   completedLectures: string[];
   enrolledAt: string;
   lastAccessed?: string;
+  isCompleted: boolean;
 }
 
 export interface ApiResponse<T> {
@@ -60,38 +74,84 @@ export interface PaginatedResponse<T> {
   };
 }
 
-// Course API calls
+/**
+ * Generic API call handler with error handling
+ */
+async function apiCall<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = `${config.API_URL}${endpoint}`;
+  
+  const defaultOptions: RequestInit = {
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  };
+
+  try {
+    const response = await fetch(url, { ...defaultOptions, ...options });
+
+    if (!response.ok) {
+      // Handle different error status codes
+      switch (response.status) {
+        case 401:
+          throw new Error('Authentication required. Please sign in.');
+        case 403:
+          throw new Error('You do not have permission to perform this action.');
+        case 404:
+          throw new Error('Resource not found.');
+        case 409:
+          throw new Error('Resource already exists or conflict occurred.');
+        case 429:
+          throw new Error('Too many requests. Please try again later.');
+        case 500:
+          throw new Error('Server error. Please try again later.');
+        default:
+          throw new Error(`Request failed with status ${response.status}`);
+      }
+    }
+
+    const data: ApiResponse<T> = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.message || 'Request failed');
+    }
+
+    return data.data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Network error occurred');
+  }
+}
+
+// =============================================================================
+// COURSE API CALLS
+// =============================================================================
+
 export async function getCourses(params?: {
   searchTerm?: string;
   page?: number;
   limit?: number;
   sort?: string;
 }): Promise<PaginatedResponse<Course>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const queryString = params ? new URLSearchParams(params as any).toString() : '';
-  const response = await fetch(`${config.API_URL}/courses?${queryString}`, {
-    credentials: 'include',
-  });
+  const queryString = params ? new URLSearchParams(
+    Object.entries(params).reduce((acc, [key, value]) => {
+      if (value !== undefined) acc[key] = String(value);
+      return acc;
+    }, {} as Record<string, string>)
+  ).toString() : '';
   
-  if (!response.ok) {
-    throw new Error(`Failed to fetch courses: ${response.status}`);
-  }
-  
-  const data: ApiResponse<PaginatedResponse<Course>> = await response.json();
-  return data.data;
+  const endpoint = queryString ? `${config.ENDPOINTS.COURSES.LIST}?${queryString}` : config.ENDPOINTS.COURSES.LIST;
+  return apiCall<PaginatedResponse<Course>>(endpoint);
 }
 
 export async function getCourse(id: string): Promise<Course> {
-  const response = await fetch(`${config.API_URL}/courses/${id}`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch course: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Course> = await response.json();
-  return data.data;
+  return apiCall<Course>(config.ENDPOINTS.COURSES.DETAIL(id));
 }
 
 export async function createCourse(courseData: {
@@ -100,21 +160,10 @@ export async function createCourse(courseData: {
   price: number;
   thumbnail: string;
 }): Promise<Course> {
-  const response = await fetch(`${config.API_URL}/courses`, {
+  return apiCall<Course>(config.ENDPOINTS.COURSES.CREATE, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(courseData),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to create course: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Course> = await response.json();
-  return data.data;
 }
 
 export async function updateCourse(id: string, courseData: Partial<{
@@ -123,281 +172,120 @@ export async function updateCourse(id: string, courseData: Partial<{
   price: number;
   thumbnail: string;
 }>): Promise<Course> {
-  const response = await fetch(`${config.API_URL}/courses/${id}`, {
+  return apiCall<Course>(config.ENDPOINTS.COURSES.UPDATE(id), {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(courseData),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to update course: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Course> = await response.json();
-  return data.data;
 }
 
 export async function deleteCourse(id: string): Promise<void> {
-  const response = await fetch(`${config.API_URL}/courses/${id}`, {
+  await apiCall<void>(config.ENDPOINTS.COURSES.DELETE(id), {
     method: 'DELETE',
-    credentials: 'include',
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to delete course: ${response.status}`);
-  }
 }
 
-// Module API calls
+// =============================================================================
+// MODULE API CALLS
+// =============================================================================
+
 export async function getModulesByCourse(courseId: string): Promise<Module[]> {
-  const response = await fetch(`${config.API_URL}/modules/${courseId}/modules`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch modules: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Module[]> = await response.json();
-  return data.data;
+  return apiCall<Module[]>(config.ENDPOINTS.MODULES.BY_COURSE(courseId));
 }
 
 export async function createModule(moduleData: {
   title: string;
   courseId: string;
-  moduleNumber: number;
 }): Promise<Module> {
-  const response = await fetch(`${config.API_URL}/modules/${moduleData.courseId}/modules`, {
+  return apiCall<Module>(config.ENDPOINTS.MODULES.CREATE(moduleData.courseId), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({
-      title: moduleData.title,
-      courseId: moduleData.courseId,
-    }),
+    body: JSON.stringify({ title: moduleData.title }),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to create module: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Module> = await response.json();
-  return data.data;
 }
 
 export async function updateModule(id: string, moduleData: {
   title: string;
 }): Promise<Module> {
-  const response = await fetch(`${config.API_URL}/modules/modules/${id}`, {
+  return apiCall<Module>(config.ENDPOINTS.MODULES.UPDATE(id), {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(moduleData),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to update module: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Module> = await response.json();
-  return data.data;
 }
 
 export async function deleteModule(id: string): Promise<void> {
-  const response = await fetch(`${config.API_URL}/modules/modules/${id}`, {
+  await apiCall<void>(config.ENDPOINTS.MODULES.DELETE(id), {
     method: 'DELETE',
-    credentials: 'include',
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to delete module: ${response.status}`);
-  }
 }
 
-// Lecture API calls
+// =============================================================================
+// LECTURE API CALLS
+// =============================================================================
+
 export async function getLecturesByModule(moduleId: string): Promise<Lecture[]> {
-  const response = await fetch(`${config.API_URL}/lectures/modules/${moduleId}/lectures`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch lectures: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Lecture[]> = await response.json();
-  return data.data;
+  return apiCall<Lecture[]>(config.ENDPOINTS.LECTURES.BY_MODULE(moduleId));
 }
 
 export async function createLecture(lectureData: {
   title: string;
-  content: string;
-  videoUrl?: string;
+  videoUrl: string;
   moduleId: string;
-  lectureNumber: number;
 }): Promise<Lecture> {
-  const response = await fetch(`${config.API_URL}/lectures/modules/${lectureData.moduleId}/lectures`, {
+  return apiCall<Lecture>(config.ENDPOINTS.LECTURES.CREATE(lectureData.moduleId), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(lectureData),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to create lecture: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Lecture> = await response.json();
-  return data.data;
 }
 
 export async function updateLecture(id: string, lectureData: Partial<{
   title: string;
-  content: string;
   videoUrl: string;
 }>): Promise<Lecture> {
-  const response = await fetch(`${config.API_URL}/lectures/lectures/${id}`, {
+  return apiCall<Lecture>(config.ENDPOINTS.LECTURES.UPDATE(id), {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(lectureData),
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to update lecture: ${response.status}`);
-  }
-  
-  const data: ApiResponse<Lecture> = await response.json();
-  return data.data;
 }
 
 export async function deleteLecture(id: string): Promise<void> {
-  const response = await fetch(`${config.API_URL}/lectures/lectures/${id}`, {
+  await apiCall<void>(config.ENDPOINTS.LECTURES.DELETE(id), {
     method: 'DELETE',
-    credentials: 'include',
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to delete lecture: ${response.status}`);
-  }
 }
 
-// User Progress API calls
+// =============================================================================
+// USER PROGRESS API CALLS
+// =============================================================================
+
 export async function enrollInCourse(courseId: string): Promise<UserProgress> {
-  const response = await fetch(`${config.API_URL}/courses/${courseId}/enroll`, {
+  return apiCall<UserProgress>(config.ENDPOINTS.COURSES.ENROLL(courseId), {
     method: 'POST',
-    credentials: 'include',
   });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to enroll in course: ${response.status}`);
-  }
-  
-  const data: ApiResponse<UserProgress> = await response.json();
-  return data.data;
-}
-
-export async function getUserProgress(courseId: string): Promise<UserProgress> {
-  const response = await fetch(`${config.API_URL}/lectures/${courseId}/progress`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch user progress: ${response.status}`);
-  }
-  
-  const data: ApiResponse<UserProgress> = await response.json();
-  return data.data;
-}
-
-export async function markLectureComplete(lectureId: string): Promise<UserProgress> {
-  const response = await fetch(`${config.API_URL}/lectures/lectures/${lectureId}/complete`, {
-    method: 'POST',
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to mark lecture complete: ${response.status}`);
-  }
-  
-  const data: ApiResponse<UserProgress> = await response.json();
-  return data.data;
 }
 
 export async function getEnrolledCourses(): Promise<UserProgress[]> {
-  const response = await fetch(`${config.API_URL}/courses/enrolled`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch enrolled courses: ${response.status}`);
-  }
-  
-  const data: ApiResponse<UserProgress[]> = await response.json();
-  return data.data;
+  return apiCall<UserProgress[]>(config.ENDPOINTS.COURSES.ENROLLED);
 }
 
-// Get user's enrolled courses with progress
-export async function getUserEnrolledCoursesWithProgress(): Promise<(UserProgress & { course: Course })[]> {
-  const response = await fetch(`${config.API_URL}/courses/enrolled/progress`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch enrolled courses with progress: ${response.status}`);
-  }
-  
-  const data: ApiResponse<(UserProgress & { course: Course })[]> = await response.json();
-  return data.data;
+export async function getUserProgress(courseId: string): Promise<UserProgress> {
+  return apiCall<UserProgress>(config.ENDPOINTS.LECTURES.PROGRESS(courseId));
 }
 
-// Upload PDF notes for lecture (if implementing file upload)
-export async function uploadLectureNotes(lectureId: string, files: File[]): Promise<string[]> {
-  const formData = new FormData();
-  files.forEach(file => {
-    formData.append('notes', file);
-  });
-
-  const response = await fetch(`${config.API_URL}/lectures/${lectureId}/notes`, {
+export async function markLectureComplete(lectureId: string): Promise<UserProgress> {
+  return apiCall<UserProgress>(config.ENDPOINTS.LECTURES.COMPLETE(lectureId), {
     method: 'POST',
-    credentials: 'include',
-    body: formData,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to upload notes: ${response.status}`);
-  }
-
-  const data: ApiResponse<{ noteUrls: string[] }> = await response.json();
-  return data.data.noteUrls;
 }
 
-// Get lecture notes
-export async function getLectureNotes(lectureId: string): Promise<string[]> {
-  const response = await fetch(`${config.API_URL}/lectures/${lectureId}/notes`, {
-    credentials: 'include',
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch lecture notes: ${response.status}`);
-  }
-  
-  const data: ApiResponse<{ noteUrls: string[] }> = await response.json();
-  return data.data.noteUrls;
-}
+// =============================================================================
+// COURSE STRUCTURE API CALLS
+// =============================================================================
 
-// Get course with full structure (modules + lectures)
-export async function getCourseWithStructure(courseId: string): Promise<Course & { modules: (Module & { lectures: Lecture[] })[] }> {
+export async function getCourseWithStructure(courseId: string): Promise<Course & { 
+  modules: (Module & { lectures: Lecture[] })[];
+  userProgress?: UserProgress;
+  totalLectures?: number;
+  completedLectures?: number;
+}> {
   try {
     // Fetch course details
     const course = await getCourse(courseId);
@@ -417,32 +305,59 @@ export async function getCourseWithStructure(courseId: string): Promise<Course &
         }
       })
     );
+
+    // Try to fetch user progress (optional - might fail if not authenticated)
+    let userProgress: UserProgress | undefined;
+    let totalLectures = 0;
+    let completedLectures = 0;
+
+    try {
+      userProgress = await getUserProgress(courseId);
+      totalLectures = modulesWithLectures.reduce((sum, module) => sum + module.lectures.length, 0);
+      completedLectures = userProgress.completedLectures.length;
+    } catch (error) {
+      // User might not be enrolled or authenticated - this is OK
+      console.log('User progress not available:', error);
+    }
     
-    return { ...course, modules: modulesWithLectures };
+    return { 
+      ...course, 
+      modules: modulesWithLectures,
+      userProgress,
+      totalLectures,
+      completedLectures
+    };
   } catch (error) {
     console.error('Failed to fetch course structure:', error);
     throw error;
   }
 }
 
-// Check if user can access specific lecture (unlock logic)
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Check if user can access specific lecture (unlock logic)
+ */
 export function isLectureUnlocked(
   lecture: Lecture, 
   allLectures: Lecture[], 
   completedLectures: string[]
 ): boolean {
-  // First lecture of course is always unlocked
-  if (allLectures.length > 0 && allLectures[0]._id === lecture._id) {
+  // First lecture is always unlocked
+  const sortedLectures = allLectures.sort((a, b) => a.lectureNumber - b.lectureNumber);
+  if (sortedLectures.length > 0 && sortedLectures[0]._id === lecture._id) {
     return true;
   }
   
-  // Find lecture index
-  const lectureIndex = allLectures.findIndex(l => l._id === lecture._id);
+  // Find lecture index in sorted order
+  const lectureIndex = sortedLectures.findIndex(l => l._id === lecture._id);
   if (lectureIndex === -1) return false;
   
   // Check if all previous lectures are completed
   for (let i = 0; i < lectureIndex; i++) {
-    if (!completedLectures.includes(allLectures[i]._id)) {
+    if (!completedLectures.includes(sortedLectures[i]._id)) {
       return false;
     }
   }
@@ -450,39 +365,93 @@ export function isLectureUnlocked(
   return true;
 }
 
-// Get next lecture in sequence
+/**
+ * Get next lecture in sequence
+ */
 export function getNextLecture(currentLectureId: string, allLectures: Lecture[]): Lecture | null {
-  const currentIndex = allLectures.findIndex(l => l._id === currentLectureId);
-  if (currentIndex === -1 || currentIndex === allLectures.length - 1) {
+  const sortedLectures = allLectures.sort((a, b) => a.lectureNumber - b.lectureNumber);
+  const currentIndex = sortedLectures.findIndex(l => l._id === currentLectureId);
+  
+  if (currentIndex === -1 || currentIndex === sortedLectures.length - 1) {
     return null;
   }
-  return allLectures[currentIndex + 1];
+  
+  return sortedLectures[currentIndex + 1];
 }
 
-// Get previous lecture in sequence
+/**
+ * Get previous lecture in sequence
+ */
 export function getPreviousLecture(currentLectureId: string, allLectures: Lecture[]): Lecture | null {
-  const currentIndex = allLectures.findIndex(l => l._id === currentLectureId);
+  const sortedLectures = allLectures.sort((a, b) => a.lectureNumber - b.lectureNumber);
+  const currentIndex = sortedLectures.findIndex(l => l._id === currentLectureId);
+  
   if (currentIndex <= 0) {
     return null;
   }
-  return allLectures[currentIndex - 1];
+  
+  return sortedLectures[currentIndex - 1];
 }
 
-// Update progress with current lecture
-export async function updateCurrentLecture(courseId: string, lectureId: string): Promise<UserProgress> {
-  const response = await fetch(`${config.API_URL}/lectures/${courseId}/current-lecture`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify({ lectureId }),
-  });
+/**
+ * Calculate course progress percentage
+ */
+export function calculateCourseProgress(
+  totalLectures: number, 
+  completedLectures: number
+): number {
+  if (totalLectures === 0) return 0;
+  return Math.round((completedLectures / totalLectures) * 100);
+}
+
+/**
+ * Format course duration (if available)
+ */
+export function formatCourseDuration(lectures: Lecture[]): string {
+  const totalMinutes = lectures.reduce((sum, lecture) => sum + (lecture.duration || 0), 0);
   
-  if (!response.ok) {
-    throw new Error(`Failed to update current lecture: ${response.status}`);
+  if (totalMinutes === 0) return 'Duration not available';
+  
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} hr`;
+  return `${hours} hr ${minutes} min`;
+}
+
+/**
+ * Validate YouTube URL
+ */
+export function isValidYouTubeUrl(url: string): boolean {
+  const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+  return youtubeRegex.test(url);
+}
+
+/**
+ * Extract YouTube video ID from URL
+ */
+export function extractYouTubeVideoId(url: string): string | null {
+  const regexPatterns = [
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&\n?#]+)/,
+    /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^&\n?#]+)/,
+    /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^&\n?#]+)/
+  ];
+
+  for (const pattern of regexPatterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
   }
+
+  return null;
+}
+
+/**
+ * Get YouTube embed URL
+ */
+export function getYouTubeEmbedUrl(videoUrl: string): string {
+  const videoId = extractYouTubeVideoId(videoUrl);
+  if (!videoId) return videoUrl;
   
-  const data: ApiResponse<UserProgress> = await response.json();
-  return data.data;
+  return `https://www.youtube.com/embed/${videoId}`;
 }

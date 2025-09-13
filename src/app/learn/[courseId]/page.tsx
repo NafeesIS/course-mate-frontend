@@ -334,7 +334,7 @@ export default function LearnCoursePage() {
                       <h2 className="text-2xl font-bold text-gray-900">
                         Lecture {currentLecture.lectureNumber}: {currentLecture.title}
                       </h2>
-                      <p className="text-gray-600 mt-2">{currentLecture.content}</p>
+                      {/* <p className="text-gray-600 mt-2">{currentLecture.content}</p> */}
                     </div>
                     
                     {!isLectureCompleted(currentLecture._id) && (
@@ -392,9 +392,9 @@ export default function LearnCoursePage() {
                   <div className="prose max-w-none">
                     <div className="bg-gray-50 rounded-lg p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Lecture Notes</h3>
-                      <div className="text-gray-700 leading-relaxed">
+                      {/* <div className="text-gray-700 leading-relaxed">
                         {currentLecture.content}
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Placeholder for PDF notes */}

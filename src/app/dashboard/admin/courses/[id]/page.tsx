@@ -1,4 +1,4 @@
-// src/app/admin/courses/[id]/page.tsx
+// src/app/dashboard/admin/courses/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,8 +18,14 @@ import {
   type Module,
   type Lecture
 } from '@/services/course';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
+
+/**
+ * Enhanced Course Content Management Page
+ * Modern interface for managing course modules and lectures
+ */
 
 interface ModuleWithLectures extends Module {
   lectures: Lecture[];
@@ -29,30 +35,36 @@ function CourseContentPage() {
   const { user } = useUser();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const courseId = params.id as string;
+  const justCreated = searchParams.get('created') === 'true';
   
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<ModuleWithLectures[]>([]);
+  
+  // Form states
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [showLectureForm, setShowLectureForm] = useState<string | null>(null);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [editingLecture, setEditingLecture] = useState<Lecture | null>(null);
+  const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
   const [moduleForm, setModuleForm] = useState({
-    title: '',
-    moduleNumber: 1
+    title: ''
   });
 
   const [lectureForm, setLectureForm] = useState({
     title: '',
-    content: '',
-    videoUrl: '',
-    lectureNumber: 1
+    videoUrl: ''
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Access control
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if (user && !user.roles?.includes('admin')) {
       router.push('/dashboard');
       return;
     }
@@ -62,9 +74,18 @@ function CourseContentPage() {
     }
   }, [user, courseId]);
 
+  // Show success message for newly created courses
+  useEffect(() => {
+    if (justCreated) {
+      // Auto-expand the first module form
+      setShowModuleForm(true);
+    }
+  }, [justCreated]);
+
   const fetchCourseData = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       
       // Fetch course details
       const courseData = await getCourse(courseId);
@@ -87,50 +108,97 @@ function CourseContentPage() {
       );
       
       setModules(modulesWithLectures);
+      
+      // Auto-expand first module if it has content
+      if (modulesWithLectures.length > 0) {
+        setExpandedModule(modulesWithLectures[0]._id);
+      }
     } catch (error) {
       console.error('Failed to fetch course data:', error);
-      alert('Failed to load course data');
-      router.push('/admin/courses');
+      setError(error instanceof Error ? error.message : 'Failed to load course data');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const validateModuleForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!moduleForm.title.trim()) {
+      errors.title = 'Module title is required';
+    } else if (moduleForm.title.length < 3) {
+      errors.title = 'Title must be at least 3 characters';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateLectureForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!lectureForm.title.trim()) {
+      errors.title = 'Lecture title is required';
+    } else if (lectureForm.title.length < 3) {
+      errors.title = 'Title must be at least 3 characters';
+    }
+
+    if (!lectureForm.videoUrl.trim()) {
+      errors.videoUrl = 'Video URL is required';
+    } else {
+      try {
+        new URL(lectureForm.videoUrl);
+      } catch {
+        errors.videoUrl = 'Please enter a valid URL';
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreateModule = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateModuleForm()) return;
+
     try {
-      const nextModuleNumber = Math.max(...modules.map(m => m.moduleNumber), 0) + 1;
       await createModule({
-        title: moduleForm.title,
-        courseId,
-        moduleNumber: nextModuleNumber
+        title: moduleForm.title.trim(),
+        courseId
       });
-      setModuleForm({ title: '', moduleNumber: 1 });
+      
+      setModuleForm({ title: '' });
       setShowModuleForm(false);
+      setFormErrors({});
       await fetchCourseData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      alert(error.message || 'Failed to create module');
+      setFormErrors({ general: error.message || 'Failed to create module' });
     }
   };
 
   const handleUpdateModule = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingModule) return;
+    if (!editingModule || !validateModuleForm()) return;
     
     try {
-      await updateModule(editingModule._id, { title: moduleForm.title });
+      await updateModule(editingModule._id, { title: moduleForm.title.trim() });
       setEditingModule(null);
-      setModuleForm({ title: '', moduleNumber: 1 });
+      setModuleForm({ title: '' });
+      setFormErrors({});
       await fetchCourseData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      alert(error.message || 'Failed to update module');
+      setFormErrors({ general: error.message || 'Failed to update module' });
     }
   };
 
   const handleDeleteModule = async (moduleId: string) => {
-    if (!confirm('Are you sure? This will delete all lectures in this module.')) return;
+    const singleModule = modules.find(m => m._id === moduleId);
+    if (!singleModule) return;
+
+    if (!confirm(`Are you sure you want to delete "${singleModule.title}"? This will delete all lectures in this module.`)) return;
     
     try {
       await deleteModule(moduleId);
@@ -143,49 +211,52 @@ function CourseContentPage() {
 
   const handleCreateLecture = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!showLectureForm) return;
+    if (!showLectureForm || !validateLectureForm()) return;
     
     try {
-      const specificModule = modules.find(m => m._id === showLectureForm);
-      if (!specificModule) return;
-      
-      const nextLectureNumber = Math.max(...specificModule.lectures.map(l => l.lectureNumber), 0) + 1;
       await createLecture({
-        ...lectureForm,
-        moduleId: showLectureForm,
-        lectureNumber: nextLectureNumber
+        title: lectureForm.title.trim(),
+        videoUrl: lectureForm.videoUrl.trim(),
+        moduleId: showLectureForm
       });
       
-      setLectureForm({ title: '', content: '', videoUrl: '', lectureNumber: 1 });
+      setLectureForm({ title: '', videoUrl: '' });
       setShowLectureForm(null);
+      setFormErrors({});
       await fetchCourseData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      alert(error.message || 'Failed to create lecture');
+      setFormErrors({ general: error.message || 'Failed to create lecture' });
     }
   };
 
   const handleUpdateLecture = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingLecture) return;
+    if (!editingLecture || !validateLectureForm()) return;
     
     try {
       await updateLecture(editingLecture._id, {
-        title: lectureForm.title,
-        content: lectureForm.content,
-        videoUrl: lectureForm.videoUrl
+        title: lectureForm.title.trim(),
+        videoUrl: lectureForm.videoUrl.trim()
       });
       setEditingLecture(null);
-      setLectureForm({ title: '', content: '', videoUrl: '', lectureNumber: 1 });
+      setLectureForm({ title: '', videoUrl: '' });
+      setFormErrors({});
       await fetchCourseData();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      alert(error.message || 'Failed to update lecture');
+      setFormErrors({ general: error.message || 'Failed to update lecture' });
     }
   };
 
   const handleDeleteLecture = async (lectureId: string) => {
-    if (!confirm('Are you sure you want to delete this lecture?')) return;
+    const lecture = modules
+      .flatMap(m => m.lectures)
+      .find(l => l._id === lectureId);
+      
+    if (!lecture) return;
+
+    if (!confirm(`Are you sure you want to delete "${lecture.title}"?`)) return;
     
     try {
       await deleteLecture(lectureId);
@@ -196,40 +267,73 @@ function CourseContentPage() {
     }
   };
 
-  if (user && user.role !== 'admin') {
+  // Access control render
+  if (user && !user.roles?.includes('admin')) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don&apos;t have permission to access this page.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+            <p className="text-gray-600 mb-6">You don&apos;t have permission to manage course content.</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!course) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Course Not Found</h1>
-          <Link 
-            href="/admin/courses"
-            className="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Back to Courses
-          </Link>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded mb-4"></div>
+            <div className="h-6 bg-gray-200 rounded mb-8 w-1/2"></div>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl p-6">
+                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Course</h1>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => fetchCourseData()}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+              <Link
+                href="/dashboard/admin/courses"
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Back to Courses
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!course) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -238,8 +342,9 @@ function CourseContentPage() {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Link 
-              href="/admin/courses"
-              className="text-blue-600 hover:text-blue-800 transition-colors"
+              href="/dashboard/admin/courses"
+              className="flex items-center text-blue-600 hover:text-blue-800
+                            transition-colors"
             >
               ← Back to Courses
             </Link>
@@ -251,7 +356,7 @@ function CourseContentPage() {
             </div>
             <div className="flex gap-3">
               <Link
-                href={`/admin/courses/${courseId}/edit`}
+                href={`/dashboard/admin/courses/${courseId}/edit`}
                 className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Edit Course
@@ -266,21 +371,31 @@ function CourseContentPage() {
           </div>
         </div>
 
-        {/* Module Creation Form */}
+        {/* Module Form */}
         {(showModuleForm || editingModule) && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="bg-white rounded-xl shadow-md p-6 mb-6">
             <h3 className="text-lg font-semibold mb-4">
               {editingModule ? 'Edit Module' : 'Create New Module'}
             </h3>
-            <form onSubmit={editingModule ? handleUpdateModule : handleCreateModule} className="space-y-4">
+            {formErrors.general && (
+              <p className="text-red-600 mb-2">{formErrors.general}</p>
+            )}
+            <form 
+              onSubmit={editingModule ? handleUpdateModule : handleCreateModule} 
+              className="space-y-4"
+            >
               <input
                 type="text"
                 value={moduleForm.title}
-                onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
+                onChange={(e) => setModuleForm({ title: e.target.value })}
                 placeholder="Module title..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                required
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 ${
+                  formErrors.title ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
               />
+              {formErrors.title && (
+                <p className="text-red-600 text-sm">{formErrors.title}</p>
+              )}
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -293,7 +408,8 @@ function CourseContentPage() {
                   onClick={() => {
                     setShowModuleForm(false);
                     setEditingModule(null);
-                    setModuleForm({ title: '', moduleNumber: 1 });
+                    setModuleForm({ title: '' });
+                    setFormErrors({});
                   }}
                   className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                 >
@@ -304,12 +420,12 @@ function CourseContentPage() {
           </div>
         )}
 
-        {/* Modules List */}
+        {/* Modules */}
         <div className="space-y-6">
           {modules.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">No Modules Yet</h3>
-              <p className="text-gray-500 mb-4">Create your first module to start organizing your course content</p>
+            <div className="bg-white rounded-xl shadow-md p-8 text-center">
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Modules Yet</h3>
+              <p className="text-gray-500 mb-4">Create your first module to start building course content.</p>
               <button
                 onClick={() => setShowModuleForm(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -319,214 +435,199 @@ function CourseContentPage() {
             </div>
           ) : (
             modules.map((module) => (
-              <div key={module._id} className="bg-white rounded-lg shadow-md">
-                <div className="p-6 border-b border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        Module {module.moduleNumber}: {module.title}
-                      </h3>
-                      <p className="text-gray-600 mt-1">{module.lectures.length} lectures</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingModule(module);
-                          setModuleForm({ title: module.title, moduleNumber: module.moduleNumber });
-                        }}
-                        className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setShowLectureForm(module._id)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                      >
-                        + Add Lecture
-                      </button>
-                      <button
-                        onClick={() => handleDeleteModule(module._id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
+              <div key={module._id} className="bg-white rounded-xl shadow-md">
+                <div 
+                  className="p-6 border-b border-gray-200 cursor-pointer flex justify-between items-center"
+                  onClick={() => setExpandedModule(expandedModule === module._id ? null : module._id)}
+                >
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {module.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm">{module.lectures.length} lectures</p>
                   </div>
-
-                  {/* Lecture Creation Form */}
-                  {showLectureForm === module._id && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-semibold mb-4">Add New Lecture</h4>
-                      <form onSubmit={handleCreateLecture} className="space-y-4">
-                        <input
-                          type="text"
-                          value={lectureForm.title}
-                          onChange={(e) => setLectureForm({ ...lectureForm, title: e.target.value })}
-                          placeholder="Lecture title..."
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                          required
-                        />
-                        <textarea
-                          value={lectureForm.content}
-                          onChange={(e) => setLectureForm({ ...lectureForm, content: e.target.value })}
-                          placeholder="Lecture content/description..."
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg h-24"
-                          required
-                        />
-                        <input
-                          type="url"
-                          value={lectureForm.videoUrl}
-                          onChange={(e) => setLectureForm({ ...lectureForm, videoUrl: e.target.value })}
-                          placeholder="Video URL (YouTube, Vimeo, etc.)"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                          >
-                            Create Lecture
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowLectureForm(null);
-                              setLectureForm({ title: '', content: '', videoUrl: '', lectureNumber: 1 });
-                            }}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
-
-                  {/* Edit Lecture Form */}
-                  {editingLecture && editingLecture.moduleId === module._id && (
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-semibold mb-4">Edit Lecture</h4>
-                      <form onSubmit={handleUpdateLecture} className="space-y-4">
-                        <input
-                          type="text"
-                          value={lectureForm.title}
-                          onChange={(e) => setLectureForm({ ...lectureForm, title: e.target.value })}
-                          placeholder="Lecture title..."
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                          required
-                        />
-                        <textarea
-                          value={lectureForm.content}
-                          onChange={(e) => setLectureForm({ ...lectureForm, content: e.target.value })}
-                          placeholder="Lecture content/description..."
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg h-24"
-                          required
-                        />
-                        <input
-                          type="url"
-                          value={lectureForm.videoUrl}
-                          onChange={(e) => setLectureForm({ ...lectureForm, videoUrl: e.target.value })}
-                          placeholder="Video URL (YouTube, Vimeo, etc.)"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                          >
-                            Update Lecture
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingLecture(null);
-                              setLectureForm({ title: '', content: '', videoUrl: '', lectureNumber: 1 });
-                            }}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingModule(module);
+                        setModuleForm({ title: module.title });
+                      }}
+                      className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowLectureForm(module._id);
+                      }}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                    >
+                      + Add Lecture
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteModule(module._id);
+                      }}
+                      className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
 
-                {/* Lectures List */}
-                <div className="p-6">
-                  {module.lectures.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No lectures in this module</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {module.lectures.map((lecture) => (
-                        <div key={lecture._id} className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <h5 className="font-medium text-gray-900">
-                              Lecture {lecture.lectureNumber}: {lecture.title}
-                            </h5>
-                            <p className="text-gray-600 text-sm mt-1 line-clamp-2">{lecture.content}</p>
-                            {lecture.videoUrl && (
-                              <a 
-                                href={lecture.videoUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm"
-                              >
-                                View Video →
-                              </a>
-                            )}
-                          </div>
-                          <div className="flex gap-2 ml-4">
+                {/* Expanded Module Content */}
+                {expandedModule === module._id && (
+                  <div className="p-6 space-y-4">
+                    {/* Add Lecture Form */}
+                    {showLectureForm === module._id && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold mb-3">Add New Lecture</h4>
+                        {formErrors.general && (
+                          <p className="text-red-600 mb-2">{formErrors.general}</p>
+                        )}
+                        <form onSubmit={handleCreateLecture} className="space-y-4">
+                          <input
+                            type="text"
+                            value={lectureForm.title}
+                            onChange={(e) => setLectureForm({ ...lectureForm, title: e.target.value })}
+                            placeholder="Lecture title..."
+                            className={`w-full px-4 py-2 border rounded-lg ${
+                              formErrors.title ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                          />
+                          {formErrors.title && <p className="text-red-600 text-sm">{formErrors.title}</p>}
+                          <input
+                            type="url"
+                            value={lectureForm.videoUrl}
+                            onChange={(e) => setLectureForm({ ...lectureForm, videoUrl: e.target.value })}
+                            placeholder="Video URL (YouTube, Vimeo, etc.)"
+                            className={`w-full px-4 py-2 border rounded-lg ${
+                              formErrors.videoUrl ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                          />
+                          {formErrors.videoUrl && <p className="text-red-600 text-sm">{formErrors.videoUrl}</p>}
+                          <div className="flex gap-2">
                             <button
+                              type="submit"
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                            >
+                              Create Lecture
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => {
-                                setEditingLecture(lecture);
-                                setLectureForm({
-                                  title: lecture.title,
-                                  content: lecture.content,
-                                  videoUrl: lecture.videoUrl || '',
-                                  lectureNumber: lecture.lectureNumber
-                                });
+                                setShowLectureForm(null);
+                                setLectureForm({ title: '', videoUrl: '' });
+                                setFormErrors({});
                               }}
-                              className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                             >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteLecture(lecture._id)}
-                              className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
-                            >
-                              Delete
+                              Cancel
                             </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Lectures List */}
+                    {module.lectures.length === 0 ? (
+                      <p className="text-gray-500 italic">No lectures yet</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {module.lectures.map((lecture) => (
+                          <div 
+                            key={lecture._id} 
+                            className="flex justify-between items-center p-4 border border-gray-200 rounded-lg"
+                          >
+                            <div>
+                              <h5 className="font-medium text-gray-900">{lecture.title}</h5>
+                              {lecture.videoUrl && (
+                                <a 
+                                  href={lecture.videoUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                  View Video →
+                                </a>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingLecture(lecture);
+                                  setLectureForm({
+                                    title: lecture.title,
+                                    videoUrl: lecture.videoUrl || ''
+                                  });
+                                }}
+                                className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLecture(lecture._id)}
+                                className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Edit Lecture Form */}
+                    {editingLecture && editingLecture.moduleId === module._id && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h4 className="font-semibold mb-3">Edit Lecture</h4>
+                        {formErrors.general && (
+                          <p className="text-red-600 mb-2">{formErrors.general}</p>
+                        )}
+                        <form onSubmit={handleUpdateLecture} className="space-y-4">
+                          <input
+                            type="text"
+                            value={lectureForm.title}
+                            onChange={(e) => setLectureForm({ ...lectureForm, title: e.target.value })}
+                            placeholder="Lecture title..."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <input
+                            type="url"
+                            value={lectureForm.videoUrl}
+                            onChange={(e) => setLectureForm({ ...lectureForm, videoUrl: e.target.value })}
+                            placeholder="Video URL"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                            >
+                              Update Lecture
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingLecture(null);
+                                setLectureForm({ title: '', videoUrl: '' });
+                              }}
+                              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))
           )}
-        </div>
-
-        {/* Course Summary */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">Course Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-blue-800">
-            <div>
-              <span className="text-2xl font-bold">{modules.length}</span>
-              <p className="text-sm">Modules</p>
-            </div>
-            <div>
-              <span className="text-2xl font-bold">
-                {modules.reduce((total, module) => total + module.lectures.length, 0)}
-              </span>
-              <p className="text-sm">Total Lectures</p>
-            </div>
-            <div>
-              <span className="text-2xl font-bold">${course.price}</span>
-              <p className="text-sm">Course Price</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
