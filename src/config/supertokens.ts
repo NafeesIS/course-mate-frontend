@@ -5,6 +5,7 @@ import SuperTokens from "supertokens-auth-react";
 import Session from "supertokens-auth-react/recipe/session";
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
+import EmailVerification from "supertokens-auth-react/recipe/emailverification";
 import { config } from "./index";
 
 /**
@@ -145,6 +146,9 @@ export const frontendConfig = () => {
       // Session Management
       Session.init({
         tokenTransferMethod: "cookie",
+      }),
+       EmailVerification.init({
+        mode: "REQUIRED", // or "OPTIONAL"
       }),
     ],
     
