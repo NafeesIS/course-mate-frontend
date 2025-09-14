@@ -16,8 +16,8 @@ import { config } from "./index";
 export const frontendConfig = () => {
   const appInfo = {
     appName: config.APP_NAME,
-    apiDomain: config.SUPERTOKENS_CONNECTION_URI,
-    websiteDomain: config.WEBSITE_URL,
+    apiDomain: config.SUPERTOKENS_CONNECTION_URI || "http://localhost:4000", // Default to localhost
+    websiteDomain: config.WEBSITE_URL || "http://localhost:3000", // Default to localhost
     apiBasePath: "/auth",
     websiteBasePath: "/auth",
   };
@@ -133,25 +133,23 @@ export const frontendConfig = () => {
           }
         `,
       }),
-      
+
       // Third-party Authentication (Google)
       ThirdParty.init({
         signInAndUpFeature: {
-          providers: [
-            ThirdParty.Google.init(),
-          ],
+          providers: [ThirdParty.Google.init()],
         },
       }),
-      
+
       // Session Management
       Session.init({
         tokenTransferMethod: "cookie",
       }),
-       EmailVerification.init({
+      EmailVerification.init({
         mode: "OPTIONAL", // or "OPTIONAL"
       }),
     ],
-    
+
     // Custom redirection logic
     getRedirectionURL: async (context: any) => {
       if (context.action === "SUCCESS") {
@@ -161,14 +159,14 @@ export const frontendConfig = () => {
         }
         return "/dashboard";
       }
-      
+
       if (context.action === "TO_AUTH") {
         return "/auth";
       }
-      
+
       return undefined;
     },
-    
+
     // Window handler for popup-based social login
     windowHandler: (oI: any) => {
       return {
@@ -178,10 +176,10 @@ export const frontendConfig = () => {
           getHostname: () => window.location.hostname,
           setHref: (href: string) => {
             window.location.href = href;
-          }
-        }
+          },
+        },
       };
-    }
+    },
   };
 };
 
@@ -189,8 +187,8 @@ export const frontendConfig = () => {
 if (typeof window !== "undefined") {
   try {
     SuperTokens.init(frontendConfig());
-    console.log('✅ SuperTokens initialized successfully');
+    console.log("✅ SuperTokens initialized successfully");
   } catch (error) {
-    console.error('❌ SuperTokens initialization failed:', error);
+    console.error("❌ SuperTokens initialization failed:", error);
   }
 }

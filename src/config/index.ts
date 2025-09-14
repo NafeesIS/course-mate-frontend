@@ -8,11 +8,11 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 export const config = {
   // API Configuration
-  API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1",
-  WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL || "http://localhost:3000",
+  API_URL: isProduction ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000/api/v1",
+  WEBSITE_URL: isProduction ? process.env.NEXT_PUBLIC_WEBSITE_URL : "http://localhost:3000",
   
   // SuperTokens Configuration
-  SUPERTOKENS_CONNECTION_URI: process.env.NEXT_PUBLIC_SUPERTOKENS_CONNECTION_URI || "http://localhost:4000",
+  SUPERTOKENS_CONNECTION_URI: isProduction ? process.env.NEXT_PUBLIC_SUPERTOKENS_CONNECTION_URI : "http://localhost:4000",
   APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || "Course Mate",
   
   // Environment
