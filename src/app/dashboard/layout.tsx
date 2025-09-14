@@ -2,12 +2,12 @@
 
 import { useSessionContext } from "supertokens-auth-react/recipe/session";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Dashboard Layout Component
  * Handles authentication state and provides consistent layout for dashboard pages
- * Redirects unauthenticated users to login page
+ * Redirects unauthenticated users to login page with a retry mechanism
  */
 
 export default function DashboardLayout({
@@ -17,12 +17,23 @@ export default function DashboardLayout({
 }) {
   const sessionContext = useSessionContext();
   const router = useRouter();
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (!sessionContext.loading && !sessionContext.doesSessionExist) {
+    // Retry a few times before redirecting
+    if (!sessionContext.loading && !sessionContext.doesSessionExist && retryCount < 3) {
+      const timeout = setTimeout(() => {
+        setRetryCount(retryCount + 1); // Increment retry count
+      }, 1000); // Retry after 1 second
+
+      return () => clearTimeout(timeout);
+    }
+
+    if (!sessionContext.loading && !sessionContext.doesSessionExist && retryCount >= 3) {
+      // After retries, redirect to login page
       router.push("/auth?error=unauthorized");
     }
-  }, [sessionContext, router]);
+  }, [sessionContext, router, retryCount]);
 
   // Show loading state while checking authentication
   if (sessionContext.loading) {
@@ -36,7 +47,7 @@ export default function DashboardLayout({
     );
   }
 
-  // Show unauthorized message if no session
+  // Show unauthorized message if no session after retries
   if (!sessionContext.doesSessionExist) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
