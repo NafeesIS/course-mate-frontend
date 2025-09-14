@@ -1,4 +1,3 @@
-
 // src/app/dashboard/admin/courses/page.tsx
 "use client";
 
@@ -9,6 +8,7 @@ import { getCourses, deleteCourse, type Course } from "@/services/course";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { generateImageUrl } from "@/utils/gegerateImageUrl";
 
 /**
  * Enhanced Admin Courses Page
@@ -22,7 +22,7 @@ interface CourseCardProps {
 
 function CourseCard({ course, onDelete }: CourseCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  // const [imageError, setImageError] = useState(false);
 
   const handleDelete = async () => {
     if (
@@ -39,24 +39,28 @@ function CourseCard({ course, onDelete }: CourseCardProps) {
       onDelete(course._id);
     } catch (error) {
       console.error("Failed to delete course:", error);
-      alert(error instanceof Error ? error.message : "Failed to delete course. Please try again.");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete course. Please try again."
+      );
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const imageUrl = generateImageUrl(course.thumbnail);
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group">
       {/* Course Thumbnail */}
       <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
-        {!imageError ? (
+        {imageUrl ? (
           <Image
-            src={course.thumbnail}
+            src={imageUrl}
             alt={course.title}
             width={400}
             height={200}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={() => setImageError(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -66,15 +70,17 @@ function CourseCard({ course, onDelete }: CourseCardProps) {
             </div>
           </div>
         )}
-        
+
         {/* Status Badge */}
         <div className="absolute top-3 right-3">
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            course.isActive 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-red-100 text-red-800'
-          }`}>
-            {course.isActive ? 'Active' : 'Inactive'}
+          <span
+            className={`px-2 py-1 rounded-full text-xs font-medium ${
+              course.isActive
+                ? "bg-green-100 text-green-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
+            {course.isActive ? "Active" : "Inactive"}
           </span>
         </div>
       </div>
@@ -94,7 +100,9 @@ function CourseCard({ course, onDelete }: CourseCardProps) {
         <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
           <div className="flex items-center space-x-4">
             <div className="flex items-center">
-              <span className="text-xl font-bold text-green-600">${course.price}</span>
+              <span className="text-xl font-bold text-green-600">
+                ${course.price}
+              </span>
             </div>
             <div className="text-xs">
               Created {new Date(course.createdAt).toLocaleDateString()}
@@ -115,8 +123,18 @@ function CourseCard({ course, onDelete }: CourseCardProps) {
             className="bg-gray-600 text-white py-2.5 px-3 rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium shadow-sm"
             title="Edit Course"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+              />
             </svg>
           </Link>
           <button
@@ -128,8 +146,18 @@ function CourseCard({ course, onDelete }: CourseCardProps) {
             {isDeleting ? (
               <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
             ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
               </svg>
             )}
           </button>
@@ -167,20 +195,22 @@ function AdminCoursesPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await getCourses({
         searchTerm: searchTerm || undefined,
         page: currentPage,
         limit: 12,
         sort: "-createdAt",
       });
-      
+
       setCourses(response.result);
       setTotalPages(response.meta.totalPage);
       setTotalCourses(response.meta.total);
     } catch (error) {
       console.error("Failed to fetch courses:", error);
-      setError(error instanceof Error ? error.message : "Failed to load courses");
+      setError(
+        error instanceof Error ? error.message : "Failed to load courses"
+      );
     } finally {
       setLoading(false);
     }
@@ -188,7 +218,7 @@ function AdminCoursesPage() {
 
   const handleDeleteCourse = (courseId: string) => {
     setCourses(courses.filter((course) => course._id !== courseId));
-    setTotalCourses(prev => prev - 1);
+    setTotalCourses((prev) => prev - 1);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -209,7 +239,9 @@ function AdminCoursesPage() {
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <div className="text-red-500 text-5xl mb-4">🚫</div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Access Denied
+            </h1>
             <p className="text-gray-600 mb-6">
               You don&apos;t have permission to access the admin panel.
             </p>
@@ -232,23 +264,35 @@ function AdminCoursesPage() {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Course Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Course Management
+              </h1>
               <p className="text-gray-600">
                 Create and manage your course content
                 {totalCourses > 0 && (
                   <span className="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    {totalCourses} course{totalCourses !== 1 ? 's' : ''}
+                    {totalCourses} course{totalCourses !== 1 ? "s" : ""}
                   </span>
                 )}
               </p>
             </div>
-            
+
             <Link
               href="/dashboard/admin/courses/create"
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium shadow-md hover:shadow-lg flex items-center space-x-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
               </svg>
               <span>Create Course</span>
             </Link>
@@ -256,7 +300,10 @@ function AdminCoursesPage() {
 
           {/* Search and Filters */}
           <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
+            <form
+              onSubmit={handleSearch}
+              className="flex flex-col sm:flex-row gap-3"
+            >
               <div className="flex-1 relative">
                 <input
                   type="text"
@@ -271,19 +318,39 @@ function AdminCoursesPage() {
                     onClick={handleClearSearch}
                     className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 )}
               </div>
-              
+
               <button
                 type="submit"
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center space-x-2"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
                 </svg>
                 <span>Search</span>
               </button>
@@ -297,7 +364,9 @@ function AdminCoursesPage() {
             <div className="flex items-center">
               <div className="text-red-400 text-xl mr-3">⚠️</div>
               <div>
-                <p className="text-red-800 font-medium">Failed to load courses</p>
+                <p className="text-red-800 font-medium">
+                  Failed to load courses
+                </p>
                 <p className="text-red-700 text-sm mt-1">{error}</p>
               </div>
               <button
@@ -314,7 +383,10 @@ function AdminCoursesPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse"
+              >
                 <div className="h-48 bg-gray-200"></div>
                 <div className="p-6">
                   <div className="h-4 bg-gray-200 rounded mb-3"></div>
@@ -341,7 +413,7 @@ function AdminCoursesPage() {
                 ? `No courses match "${searchTerm}". Try adjusting your search terms.`
                 : "Create your first course to start building your educational content and help students learn new skills."}
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {searchTerm ? (
                 <button
@@ -379,12 +451,24 @@ function AdminCoursesPage() {
                 <div className="flex items-center space-x-2">
                   {/* Previous Button */}
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
                     disabled={currentPage === 1}
                     className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center space-x-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                     <span>Previous</span>
                   </button>
@@ -402,7 +486,7 @@ function AdminCoursesPage() {
                           pageNum = currentPage - 2 + i;
                         }
                       }
-                      
+
                       return (
                         <button
                           key={pageNum}
@@ -421,13 +505,25 @@ function AdminCoursesPage() {
 
                   {/* Next Button */}
                   <button
-                    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
                     disabled={currentPage === totalPages}
                     className="px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors flex items-center space-x-1"
                   >
                     <span>Next</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -439,15 +535,19 @@ function AdminCoursesPage() {
         {/* Quick Stats */}
         {courses.length > 0 && (
           <div className="mt-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Quick Stats
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{totalCourses}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {totalCourses}
+                </div>
                 <div className="text-sm text-gray-600">Total Courses</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {courses.filter(c => c.isActive).length}
+                  {courses.filter((c) => c.isActive).length}
                 </div>
                 <div className="text-sm text-gray-600">Active Courses</div>
               </div>
@@ -459,7 +559,13 @@ function AdminCoursesPage() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-gray-600">
-                  ${courses.length > 0 ? (courses.reduce((sum, c) => sum + c.price, 0) / courses.length).toFixed(2) : '0.00'}
+                  $
+                  {courses.length > 0
+                    ? (
+                        courses.reduce((sum, c) => sum + c.price, 0) /
+                        courses.length
+                      ).toFixed(2)
+                    : "0.00"}
                 </div>
                 <div className="text-sm text-gray-600">Avg. Price</div>
               </div>

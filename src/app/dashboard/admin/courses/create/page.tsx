@@ -1,4 +1,3 @@
-// src/app/dashboard/admin/courses/create/page.tsx
 "use client";
 
 import { useState } from 'react';
@@ -14,16 +13,23 @@ import Image from 'next/image';
  * Modern form design with validation and preview functionality
  */
 
+interface FormData {
+  title: string;
+  description: string;
+  price: string;
+  thumbnail: File | null;
+}
+
 function CreateCoursePage() {
   const { user } = useUser();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreviewError, setImagePreviewError] = useState(false);
-  const [formData, setFormData] = useState({
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
     price: '',
-    thumbnail: ''
+    thumbnail: null
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -57,14 +63,14 @@ function CreateCoursePage() {
       newErrors.title = 'Course title is required';
     } else if (formData.title.length < 3) {
       newErrors.title = 'Title must be at least 3 characters long';
-    } else if (formData.title.length > 100) {
-      newErrors.title = 'Title must be less than 100 characters';
+    } else if (formData.title.length > 200) {
+      newErrors.title = 'Title must be less than 200 characters';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Course description is required';
-    } else if (formData.description.length < 20) {
-      newErrors.description = 'Description must be at least 20 characters long';
+    } else if (formData.description.length < 10) {
+      newErrors.description = 'Description must be at least 10 characters long';
     } else if (formData.description.length > 1000) {
       newErrors.description = 'Description must be less than 1000 characters';
     }
@@ -80,14 +86,8 @@ function CreateCoursePage() {
       }
     }
 
-    if (!formData.thumbnail.trim()) {
-      newErrors.thumbnail = 'Thumbnail URL is required';
-    } else {
-      try {
-        new URL(formData.thumbnail);
-      } catch {
-        newErrors.thumbnail = 'Please enter a valid URL';
-      }
+    if (!formData.thumbnail) {
+      newErrors.thumbnail = 'Course thumbnail is required';
     }
 
     setErrors(newErrors);
@@ -96,22 +96,60 @@ function CreateCoursePage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
 
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: '',
       }));
     }
+  };
 
-    // Reset image error when URL changes
-    if (name === 'thumbnail') {
-      setImagePreviewError(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setErrors(prev => ({
+          ...prev,
+          thumbnail: 'Please select a valid image file (JPG, PNG, or WebP)',
+        }));
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({
+          ...prev,
+          thumbnail: 'File size must be less than 5MB',
+        }));
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        thumbnail: file,
+      }));
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setThumbnailPreview(previewUrl);
+
+      // Clear thumbnail error
+      if (errors.thumbnail) {
+        setErrors(prev => ({
+          ...prev,
+          thumbnail: '',
+        }));
+      }
     }
   };
 
@@ -128,11 +166,16 @@ function CreateCoursePage() {
         title: formData.title.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
-        thumbnail: formData.thumbnail.trim()
+        thumbnail: formData.thumbnail!
       });
       
+      // Cleanup preview URL
+      if (thumbnailPreview) {
+        URL.revokeObjectURL(thumbnailPreview);
+      }
+      
       // Show success and redirect
-      router.push(`/dashboard/admin/courses/${newCourse._id}?created=true`);
+      router.push(`/dashboard/admin/courses`);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Failed to create course:', error);
@@ -212,13 +255,11 @@ function CreateCoursePage() {
                     value={formData.title}
                     onChange={handleInputChange}
                     placeholder="e.g., Complete React Development Bootcamp"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                      errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                    maxLength={100}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors placeholder-gray-400 ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    maxLength={200}
                   />
                   {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-                  <p className="mt-1 text-xs text-gray-500">{formData.title.length}/100 characters</p>
+                  <p className="mt-1 text-xs text-gray-500">{formData.title.length}/200 characters</p>
                 </div>
 
                 {/* Course Description */}
@@ -233,9 +274,7 @@ function CreateCoursePage() {
                     onChange={handleInputChange}
                     placeholder="Describe what students will learn in this course. Include key topics, skills, and outcomes..."
                     rows={6}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical transition-colors ${
-                      errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical transition-colors placeholder-gray-400 ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     maxLength={1000}
                   />
                   {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
@@ -261,9 +300,7 @@ function CreateCoursePage() {
                       min="0"
                       max="10000"
                       step="0.01"
-                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                        errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
+                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors placeholder-gray-400 ${errors.price ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
                     />
                   </div>
                   {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
@@ -273,21 +310,37 @@ function CreateCoursePage() {
                 {/* Course Thumbnail */}
                 <div>
                   <label htmlFor="thumbnail" className="block text-sm font-medium text-gray-700 mb-2">
-                    Thumbnail Image URL *
+                    Thumbnail Image *
                   </label>
-                  <input
-                    type="url"
-                    id="thumbnail"
-                    name="thumbnail"
-                    value={formData.thumbnail}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/image.jpg"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                      errors.thumbnail ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                    }`}
-                  />
-                  {errors.thumbnail && <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>}
-                  <p className="mt-1 text-xs text-gray-500">Recommended size: 400x300px or 16:9 aspect ratio</p>
+                  <div className="space-y-3">
+                    <input
+                      type="file"
+                      id="thumbnail"
+                      name="thumbnail"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleFileChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 ${errors.thumbnail ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+                    />
+                    {errors.thumbnail && <p className="mt-1 text-sm text-red-600">{errors.thumbnail}</p>}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Accepted formats: JPG, PNG, WebP • Max size: 5MB • Recommended: 400x300px or 16:9 aspect ratio
+                    </p>
+                    
+                    {/* Thumbnail Preview */}
+                    {thumbnailPreview && (
+                      <div className="mt-3">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                        <div className="relative w-48 h-32 border-2 border-gray-200 rounded-lg overflow-hidden">
+                          <Image
+                            src={thumbnailPreview}
+                            alt="Thumbnail preview"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -302,7 +355,7 @@ function CreateCoursePage() {
                   </Link>
                   <button
                     type="submit"
-                    disabled={!isFormValid || isSubmitting}
+                    // disabled={!isFormValid || isSubmitting}
                     className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center space-x-2"
                   >
                     {isSubmitting ? (
@@ -336,20 +389,18 @@ function CreateCoursePage() {
                 <div className="p-4">
                   {/* Thumbnail Preview */}
                   <div className="relative h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4 overflow-hidden">
-                    {formData.thumbnail && !imagePreviewError ? (
+                    {thumbnailPreview ? (
                       <Image
-                        src={formData.thumbnail}
+                        src={thumbnailPreview}
                         alt="Course thumbnail preview"
-                        width={300}
-                        height={160}
-                        className="w-full h-full object-cover"
-                        onError={() => setImagePreviewError(true)}
+                        fill
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
                         <div className="text-center">
                           <div className="text-2xl mb-1">📚</div>
-                          <p className="text-xs">Thumbnail Preview</p>
+                          <p className="text-xs">Upload a thumbnail</p>
                         </div>
                       </div>
                     )}
@@ -370,7 +421,7 @@ function CreateCoursePage() {
                         ${formData.price || '0.00'}
                       </span>
                       <span className="text-xs text-gray-500">
-                        {formData.price === '0' ? 'Free Course' : 'Paid Course'}
+                        {formData.price === '0' || formData.price === '' ? 'Free Course' : 'Paid Course'}
                       </span>
                     </div>
                   </div>

@@ -16,6 +16,7 @@ import {
 } from "@/services/course";
 import Link from "next/link";
 import Image from "next/image";
+import { generateImageUrl } from "@/utils/gegerateImageUrl";
 
 interface ModuleWithLectures extends Module {
   lectures: Lecture[];
@@ -37,9 +38,12 @@ export default function LearnCoursePage() {
   const [currentLecture, setCurrentLecture] = useState<Lecture | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set()
+  );
 
-  const isAuthenticated = !sessionContext.loading && sessionContext.doesSessionExist;
+  const isAuthenticated =
+    !sessionContext.loading && sessionContext.doesSessionExist;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -66,15 +70,17 @@ export default function LearnCoursePage() {
 
       // Set current lecture (either from progress or first lecture)
       if (progress.currentLecture) {
-        const currentLec = findLectureById(courseData.modules, progress.currentLecture);
+        const currentLec = findLectureById(
+          courseData.modules,
+          progress.currentLecture
+        );
         setCurrentLecture(currentLec);
       } else if (courseData.modules[0]?.lectures[0]) {
         setCurrentLecture(courseData.modules[0].lectures[0]);
       }
 
       // Expand all modules by default
-      setExpandedModules(new Set(courseData.modules.map(m => m._id)));
-
+      setExpandedModules(new Set(courseData.modules.map((m) => m._id)));
     } catch (error) {
       console.error("Failed to fetch course data:", error);
       alert("Failed to load course. You may not be enrolled.");
@@ -84,9 +90,12 @@ export default function LearnCoursePage() {
     }
   };
 
-  const findLectureById = (modules: ModuleWithLectures[], lectureId: string): Lecture | null => {
+  const findLectureById = (
+    modules: ModuleWithLectures[],
+    lectureId: string
+  ): Lecture | null => {
     for (const singleModule of modules) {
-      const lecture = singleModule.lectures.find(l => l._id === lectureId);
+      const lecture = singleModule.lectures.find((l) => l._id === lectureId);
       if (lecture) return lecture;
     }
     return null;
@@ -94,18 +103,18 @@ export default function LearnCoursePage() {
 
   const isLectureUnlocked = (lecture: Lecture): boolean => {
     if (!userProgress) return false;
-    
+
     // First lecture of first module is always unlocked
     if (course?.modules[0]?.lectures[0]?._id === lecture._id) {
       return true;
     }
 
     // Check if previous lectures are completed
-    const allLectures = course?.modules.flatMap(m => m.lectures) || [];
-    const lectureIndex = allLectures.findIndex(l => l._id === lecture._id);
-    
+    const allLectures = course?.modules.flatMap((m) => m.lectures) || [];
+    const lectureIndex = allLectures.findIndex((l) => l._id === lecture._id);
+
     if (lectureIndex === 0) return true;
-    
+
     const previousLecture = allLectures[lectureIndex - 1];
     return userProgress.completedLectures.includes(previousLecture._id);
   };
@@ -124,10 +133,12 @@ export default function LearnCoursePage() {
       setUserProgress(updatedProgress);
 
       // Auto-advance to next lecture if available
-      const allLectures = course?.modules.flatMap(m => m.lectures) || [];
-      const currentIndex = allLectures.findIndex(l => l._id === currentLecture._id);
+      const allLectures = course?.modules.flatMap((m) => m.lectures) || [];
+      const currentIndex = allLectures.findIndex(
+        (l) => l._id === currentLecture._id
+      );
       const nextLecture = allLectures[currentIndex + 1];
-      
+
       if (nextLecture) {
         setCurrentLecture(nextLecture);
       }
@@ -148,18 +159,22 @@ export default function LearnCoursePage() {
   };
 
   const extractYouTubeId = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    const match = url.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/
+    );
     return match ? match[1] : null;
   };
 
-  const filteredModules = course?.modules.map(module => ({
-    ...module,
-    lectures: module.lectures.filter(lecture =>
-      lecture.title.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })).filter(module => 
-    searchTerm === "" || module.lectures.length > 0
-  ) || [];
+  const filteredModules =
+    course?.modules
+      .map((module) => ({
+        ...module,
+        lectures: module.lectures.filter((lecture) =>
+          lecture.title.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+      }))
+      .filter((module) => searchTerm === "" || module.lectures.length > 0) ||
+    [];
 
   const isLectureCompleted = (lectureId: string) => {
     return userProgress?.completedLectures.includes(lectureId) || false;
@@ -177,8 +192,12 @@ export default function LearnCoursePage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Course Not Found</h1>
-          <p className="text-gray-600 mb-4">You may not be enrolled in this course.</p>
+          <h1 className="text-2xl font-bold text-red-600 mb-2">
+            Course Not Found
+          </h1>
+          <p className="text-gray-600 mb-4">
+            You may not be enrolled in this course.
+          </p>
           <Link href="/courses" className="text-blue-600 hover:underline">
             Browse Courses
           </Link>
@@ -187,10 +206,14 @@ export default function LearnCoursePage() {
     );
   }
 
-  const totalLectures = course.modules.reduce((sum, module) => sum + module.lectures.length, 0);
+  const totalLectures = course.modules.reduce(
+    (sum, module) => sum + module.lectures.length,
+    0
+  );
   const completedLectures = userProgress?.completedLectures.length || 0;
-  const progressPercentage = totalLectures > 0 ? (completedLectures / totalLectures) * 100 : 0;
-
+  const progressPercentage =
+    totalLectures > 0 ? (completedLectures / totalLectures) * 100 : 0;
+  const ImageUrl = generateImageUrl(course.thumbnail);
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -205,22 +228,28 @@ export default function LearnCoursePage() {
               >
                 ← Back to Course Details
               </Link>
-              
-              <Image
-                src={course.thumbnail || "/api/placeholder/300/150"}
-                alt={course.title}
-                width={300}
-                height={150}
-                className="w-full h-32 object-cover rounded-lg mb-4"
-              />
-              
-              <h1 className="text-lg font-bold text-gray-900 mb-2">{course.title}</h1>
-              
+
+              {ImageUrl && (
+                <Image
+                  src={ImageUrl || "/api/placeholder/300/150"}
+                  alt={course.title}
+                  width={300}
+                  height={150}
+                  className="w-full h-32 object-cover rounded-lg mb-4"
+                />
+              )}
+
+              <h1 className="text-lg font-bold text-gray-900 mb-2">
+                {course.title}
+              </h1>
+
               {/* Progress Bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-1">
                   <span>Progress</span>
-                  <span>{completedLectures}/{totalLectures}</span>
+                  <span>
+                    {completedLectures}/{totalLectures}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
@@ -228,7 +257,9 @@ export default function LearnCoursePage() {
                     style={{ width: `${progressPercentage}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{Math.round(progressPercentage)}% Complete</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {Math.round(progressPercentage)}% Complete
+                </p>
               </div>
 
               {/* Search Lectures */}
@@ -250,7 +281,9 @@ export default function LearnCoursePage() {
             <div className="p-4">
               {filteredModules.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">No lectures found matching {searchTerm}</p>
+                  <p className="text-gray-500">
+                    No lectures found matching {searchTerm}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -275,7 +308,8 @@ export default function LearnCoursePage() {
                           {module.lectures.map((lecture) => {
                             const isUnlocked = isLectureUnlocked(lecture);
                             const isCompleted = isLectureCompleted(lecture._id);
-                            const isCurrent = currentLecture?._id === lecture._id;
+                            const isCurrent =
+                              currentLecture?._id === lecture._id;
 
                             return (
                               <button
@@ -291,24 +325,37 @@ export default function LearnCoursePage() {
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                                    isCompleted
-                                      ? "bg-green-500 text-white"
-                                      : isUnlocked
-                                      ? "bg-blue-100 text-blue-600"
-                                      : "bg-gray-200 text-gray-400"
-                                  }`}>
-                                    {isCompleted ? "✓" : !isUnlocked ? "🔒" : lecture.lectureNumber}
+                                  <div
+                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                                      isCompleted
+                                        ? "bg-green-500 text-white"
+                                        : isUnlocked
+                                        ? "bg-blue-100 text-blue-600"
+                                        : "bg-gray-200 text-gray-400"
+                                    }`}
+                                  >
+                                    {isCompleted
+                                      ? "✓"
+                                      : !isUnlocked
+                                      ? "🔒"
+                                      : lecture.lectureNumber}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className={`text-sm font-medium ${
-                                      isUnlocked ? "text-gray-900" : "text-gray-400"
-                                    }`}>
-                                      Lecture {lecture.lectureNumber}: {lecture.title}
+                                    <h4
+                                      className={`text-sm font-medium ${
+                                        isUnlocked
+                                          ? "text-gray-900"
+                                          : "text-gray-400"
+                                      }`}
+                                    >
+                                      Lecture {lecture.lectureNumber}:{" "}
+                                      {lecture.title}
                                     </h4>
                                   </div>
                                   {lecture.videoUrl && (
-                                    <span className="text-blue-500 text-xs">🎥</span>
+                                    <span className="text-blue-500 text-xs">
+                                      🎥
+                                    </span>
                                   )}
                                 </div>
                               </button>
@@ -332,11 +379,12 @@ export default function LearnCoursePage() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h2 className="text-2xl font-bold text-gray-900">
-                        Lecture {currentLecture.lectureNumber}: {currentLecture.title}
+                        Lecture {currentLecture.lectureNumber}:{" "}
+                        {currentLecture.title}
                       </h2>
                       {/* <p className="text-gray-600 mt-2">{currentLecture.content}</p> */}
                     </div>
-                    
+
                     {!isLectureCompleted(currentLecture._id) && (
                       <button
                         onClick={handleMarkComplete}
@@ -364,7 +412,9 @@ export default function LearnCoursePage() {
                       <div className="aspect-w-16 aspect-h-9 mb-4">
                         {extractYouTubeId(currentLecture.videoUrl) ? (
                           <iframe
-                            src={`https://www.youtube.com/embed/${extractYouTubeId(currentLecture.videoUrl)}`}
+                            src={`https://www.youtube.com/embed/${extractYouTubeId(
+                              currentLecture.videoUrl
+                            )}`}
                             title={currentLecture.title}
                             className="w-full h-96 rounded-lg shadow-lg"
                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -384,14 +434,18 @@ export default function LearnCoursePage() {
                   ) : (
                     <div className="bg-gray-100 rounded-lg p-8 text-center mb-8">
                       <div className="text-gray-400 text-4xl mb-4">🎥</div>
-                      <p className="text-gray-600">No video available for this lecture</p>
+                      <p className="text-gray-600">
+                        No video available for this lecture
+                      </p>
                     </div>
                   )}
 
                   {/* Lecture Content */}
                   <div className="prose max-w-none">
                     <div className="bg-gray-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Lecture Notes</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Lecture Notes
+                      </h3>
                       {/* <div className="text-gray-700 leading-relaxed">
                         {currentLecture.content}
                       </div> */}
@@ -399,7 +453,9 @@ export default function LearnCoursePage() {
 
                     {/* Placeholder for PDF notes */}
                     <div className="mt-6 bg-blue-50 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-blue-900 mb-4">Downloadable Resources</h3>
+                      <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                        Downloadable Resources
+                      </h3>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-blue-700">
                           <span>📄</span>

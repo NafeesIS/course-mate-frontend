@@ -18,6 +18,7 @@ import {
 } from "@/services/course";
 import Link from "next/link";
 import Image from "next/image";
+import { generateImageUrl } from "@/utils/gegerateImageUrl";
 
 interface ModuleWithLectures extends Module {
   lectures: Lecture[];
@@ -40,7 +41,7 @@ export default function CourseDetailsPage() {
   const isAuthenticated =
     !sessionContext.loading && sessionContext.doesSessionExist;
   const isEnrolled = userProgress !== null;
-
+  const isAdmin = user?.roles?.includes("admin");
   useEffect(() => {
     if (courseId) {
       fetchCourseData();
@@ -147,7 +148,7 @@ export default function CourseDetailsPage() {
       </div>
     );
   }
-
+  const imageUrl = generateImageUrl(course.thumbnail);
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Course Header */}
@@ -190,35 +191,197 @@ export default function CourseDetailsPage() {
                 </div>
               </div>
 
-              {/* Progress Bar (if enrolled) */}
-              {isEnrolled && userProgress && (
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Your Progress
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      {completedLectures} of {totalLectures} lectures completed
-                    </span>
+              {/* Enhanced Progress/Status Section */}
+              <div className="mb-6">
+                {/* For Enrolled Users - Show Progress */}
+                {isEnrolled && userProgress && !isAdmin && (
+                  <>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Your Progress
+                      </span>
+                      <span className="text-sm text-gray-600">
+                        {completedLectures} of {totalLectures} lectures
+                        completed
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div
+                        className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${userProgress.progressPercentage}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {userProgress.progressPercentage}% Complete
+                    </p>
+                  </>
+                )}
+
+                {/* For Admin Users - Show Admin Panel */}
+                {isAdmin && (
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-purple-600">👨‍💼</span>
+                      <span className="text-sm font-semibold text-purple-800">
+                        Admin Panel
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="bg-white rounded p-3 border border-purple-100">
+                        <div className="text-purple-600 font-medium">
+                          Course Stats
+                        </div>
+                        <div className="text-gray-600 mt-1">
+                          {totalLectures} Total Lectures
+                        </div>
+                        <div className="text-gray-600">
+                          {modules.length} Modules
+                        </div>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-purple-100">
+                        <div className="text-purple-600 font-medium">
+                          Quick Actions
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <Link
+                            href={`/admin/courses/${courseId}/edit`}
+                            className="text-purple-600 hover:text-purple-800 text-xs block"
+                          >
+                            ✏️ Edit Course
+                          </Link>
+                          <Link
+                            href={`/admin/courses/${courseId}/analytics`}
+                            className="text-purple-600 hover:text-purple-800 text-xs block"
+                          >
+                            📊 View Analytics
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Show admin progress if they're also enrolled */}
+                    {userProgress && (
+                      <div className="mt-3 pt-3 border-t border-purple-200">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="text-xs font-medium text-purple-700">
+                            Your Progress (as student)
+                          </p>
+                          <span className="text-xs text-purple-600">
+                            {completedLectures}/{totalLectures} completed
+                          </span>
+                        </div>
+                        <div className="w-full bg-purple-200 rounded-full h-2">
+                          <div
+                            className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${userProgress.progressPercentage}%`,
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${userProgress.progressPercentage}%` }}
-                    ></div>
+                )}
+
+                {/* For Unauthenticated Users - Show Course Preview Info */}
+                {!isAuthenticated && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-blue-600">🎓</span>
+                      <span className="text-sm font-semibold text-blue-800">
+                        Course Overview
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span className="text-blue-500">📚</span>
+                          <span>{modules.length} comprehensive modules</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span className="text-blue-500">🎥</span>
+                          <span>{totalLectures} video lectures</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span className="text-blue-500">⏱️</span>
+                          <span>Self-paced learning</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span className="text-blue-500">🏆</span>
+                          <span>Certificate included</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-blue-700 text-center">
+                        🔓 Sign up to track your progress and access all course
+                        materials
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {userProgress.progressPercentage}% Complete
-                  </p>
-                </div>
-              )}
+                )}
+
+                {/* For Authenticated but Not Enrolled Users - Show Enrollment Incentive */}
+                {isAuthenticated && !isEnrolled && !isAdmin && (
+                  <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-orange-600">🚀</span>
+                      <span className="text-sm font-semibold text-orange-800">
+                        Ready to Start Learning?
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <span className="text-green-500">✓</span>
+                          <span>Track your progress</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <span className="text-green-500">✓</span>
+                          <span>Access all materials</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <span className="text-green-500">✓</span>
+                          <span>Lifetime access</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-gray-600">
+                          <span className="text-green-500">✓</span>
+                          <span>Get certificate</span>
+                        </div>
+                      </div>
+
+                      {/* Preview of first module for motivation */}
+                      {modules.length > 0 && (
+                        <div className="bg-white border border-orange-200 rounded p-3">
+                          <div className="text-xs font-medium text-orange-800 mb-1">
+                            Preview: First Module
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            📖 {modules[0].title}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {modules[0].lectures?.length || 0} lectures waiting
+                            for you
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-orange-700 text-center font-medium">
+                        Join {/* You could add enrollment count here */} other
+                        students in this course!
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Course Thumbnail & Enrollment */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-6">
                 <Image
-                  src={course.thumbnail || "/api/placeholder/400/250"}
+                  src={imageUrl || "/api/placeholder/400/250"}
                   alt={course.title}
                   width={200}
                   height={150}
@@ -350,7 +513,7 @@ export default function CourseDetailsPage() {
                           No lectures in this module
                         </p>
                       ) : (
-                        module.lectures.map((lecture, lectureIndex) => {
+                        module.lectures.map((lecture) => {
                           const isCompleted =
                             userProgress?.completedLectures?.includes(
                               lecture._id
@@ -385,13 +548,20 @@ export default function CourseDetailsPage() {
                                   Lecture {lecture.lectureNumber}:{" "}
                                   {lecture.title}
                                 </h4>
-                                {/* <p className="text-gray-600 text-sm line-clamp-2">
-                                  {lecture.content}
-                                </p> */}
                               </div>
 
                               <div className="flex items-center gap-2">
-                                {lecture.videoUrl && (
+                                {isAccessible && lecture.videoUrl && (
+                                  <a
+                                    href={lecture.videoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 text-sm"
+                                  >
+                                    View Video →
+                                  </a>
+                                )}
+                                {!isAccessible && lecture.videoUrl && (
                                   <span className="text-blue-600 text-sm">
                                     🎥 Video
                                   </span>

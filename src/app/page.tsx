@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCourses, type Course } from "@/services/course";
 import { useUser } from "@/context/userContext";
+import { generateImageUrl } from "@/utils/gegerateImageUrl";
 
 export default function HomePage() {
   const { user, loading: userLoading } = useUser();
@@ -166,54 +167,57 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredCourses.map((course) => (
-                <div
-                  key={course._id}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <Image
-                      src={course.thumbnail || "/api/placeholder/400/300"}
-                      alt={course.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">
-                      {course.title}
-                    </h3>
-                    <p className="text-slate-600 text-sm mb-4 line-clamp-3">
-                      {course.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-2xl font-bold text-emerald-600">
-                        ${course.price}
-                      </span>
-                      <Link
-                        href={`/courses/${course._id}`}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        Learn More
-                        <svg
-                          className="ml-1 w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+              {featuredCourses.map((course) => {
+                const imageUrl = generateImageUrl(course.thumbnail); // Move this line outside JSX
+                return (
+                  <div
+                    key={course._id}
+                    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group"
+                  >
+                    {imageUrl && <div className="relative h-48 overflow-hidden">
+                      <Image
+                        src={imageUrl}
+                        alt={course.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </div>}
+                    <div className="p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">
+                        {course.title}
+                      </h3>
+                      <p className="text-slate-600 text-sm mb-4 line-clamp-3">
+                        {course.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-2xl font-bold text-emerald-600">
+                          ${course.price}
+                        </span>
+                        <Link
+                          href={`/courses/${course._id}`}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </Link>
+                          Learn More
+                          <svg
+                            className="ml-1 w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 

@@ -9,7 +9,7 @@ export default function DashboardRoot() {
   const { user, loading } = useUser();
   const sessionContext = useSessionContext();
   const router = useRouter();
-console.log({user});
+
   useEffect(() => {
     if (!sessionContext.loading && !loading) {
       if (!sessionContext.doesSessionExist) {
