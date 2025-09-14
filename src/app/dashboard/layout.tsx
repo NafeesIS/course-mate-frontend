@@ -2,13 +2,14 @@
 
 import { useSessionContext } from "supertokens-auth-react/recipe/session";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/context/userContext";
+import Session from 'supertokens-auth-react/recipe/session';
 
 /**
  * Dashboard Layout Component
  * Handles authentication state and provides consistent layout for dashboard pages
- * Redirects unauthenticated users to login page
+ * Redirects unauthenticated users to login page with retry and session refresh mechanism
  */
 
 export default function DashboardLayout({
@@ -19,11 +20,31 @@ export default function DashboardLayout({
   const sessionContext = useSessionContext();
   const router = useRouter();
   const { user } = useUser();
+  const [retryCount, setRetryCount] = useState(0);
+
   useEffect(() => {
-    if (!sessionContext.loading && !sessionContext.doesSessionExist && !user) {
+    // Retry logic before redirecting to login
+    const retrySession = async () => {
+      if (!sessionContext.loading && !sessionContext.doesSessionExist && !user && retryCount < 3) {
+        try {
+          // Attempt refreshing the session
+          await Session.attemptRefreshingSession();
+          
+          // Increment retry count after attempting to refresh the session
+          setRetryCount(retryCount + 1);
+        } catch (error) {
+          console.error("Error refreshing session:", error);
+        }
+      }
+    };
+
+    retrySession();
+
+    if (retryCount >= 3) {
+      // After retries, redirect to login page
       router.push("/auth?error=unauthorized");
     }
-  }, [sessionContext, router, user]);
+  }, [sessionContext, router, user, retryCount]);
 
   // Show loading state while checking authentication
   if (sessionContext.loading) {
