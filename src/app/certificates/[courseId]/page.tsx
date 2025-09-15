@@ -168,7 +168,7 @@ export default function CertificatePage() {
               <div className="text-right">
                 <div className="text-sm text-gray-500 mb-1">Certificate ID</div>
                 <div className="font-mono text-sm text-gray-900">
-                  {courseId.slice(-8).toUpperCase()}-{userProgress._id.slice(-4).toUpperCase()}
+                  {courseId && courseId?.slice(-8).toUpperCase()}-{userProgress._id.slice(-4).toUpperCase()}
                 </div>
               </div>
             </div>
