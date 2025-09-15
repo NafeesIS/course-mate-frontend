@@ -229,7 +229,7 @@ function UserDashboard() {
 
                     <div className="p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        Course #{enrollment.courseId.slice(-6)}
+                        Course #{enrollment?.courseId?.slice(-6)}
                       </h3>
                       <p className="text-gray-600 text-sm mb-4">
                         Progress tracking and learning analytics
@@ -324,7 +324,7 @@ function UserDashboard() {
                         📚
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">Course #{enrollment.courseId.slice(-6)}</h4>
+                        <h4 className="font-medium text-gray-900">Course #{enrollment?.courseId?.slice(-6)}</h4>
                         <p className="text-sm text-gray-600">
                           Last accessed {formatLastAccessed(enrollment.lastAccessed)}
                         </p>
