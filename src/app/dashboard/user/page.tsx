@@ -187,19 +187,21 @@ function UserDashboard() {
               Browse Courses
             </Link>
             <Link
-              href="/dashboard/user/profile"
+              href="/dashboard/user"
               className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium"
             >
               Update Profile
             </Link>
-            {stats.completedCourses > 0 && (
-              <Link
-                href="/dashboard/user/certificates"
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                View Certificates ({stats.completedCourses})
-              </Link>
-            )}
+            {stats.completedCourses > 0 &&
+              enrolledCourses.map((enrollment) => (
+                <Link
+                  key={enrollment.courseId._id}
+                  href={`/certificates/${enrollment.courseId._id}`}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  {enrollment.courseId.title} Certificate
+                </Link>
+              ))}
           </div>
         </div>
 
@@ -329,7 +331,7 @@ function UserDashboard() {
                               Course Completed!
                             </span>
                             <Link
-                              href={`/certificates/${enrollment.courseId}`}
+                              href={`/certificates/${enrollment.courseId._id}`}
                               className="ml-auto text-green-600 hover:text-green-800 text-sm underline"
                             >
                               View Certificate
