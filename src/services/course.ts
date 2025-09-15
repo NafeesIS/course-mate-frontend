@@ -23,7 +23,7 @@ export interface Module {
   _id: string;
   title: string;
   moduleNumber: number;
-  courseId: string;
+  courseId: Course;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -37,7 +37,7 @@ export interface Lecture {
   videoUrl: string;
   pdfNotes: string[];
   moduleId: string;
-  courseId: string;
+  courseId: Course;
   isActive: boolean;
   duration?: number;
   createdAt: string;
@@ -49,7 +49,7 @@ export interface Lecture {
 export interface UserProgress {
   _id: string;
   userId: string;
-  courseId: string;
+  courseId: Course;
   currentLecture?: string;
   progressPercentage: number;
   completedLectures: string[];
