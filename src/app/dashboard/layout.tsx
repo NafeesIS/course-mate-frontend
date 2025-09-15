@@ -4,7 +4,7 @@ import { useSessionContext } from "supertokens-auth-react/recipe/session";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/userContext";
-import Session from 'supertokens-auth-react/recipe/session';
+import Session from "supertokens-auth-react/recipe/session";
 
 /**
  * Dashboard Layout Component
@@ -21,15 +21,21 @@ export default function DashboardLayout({
   const router = useRouter();
   const { user } = useUser();
   const [retryCount, setRetryCount] = useState(0);
-
+  console.log({ sessionContext });
+  console.log({ user });
   useEffect(() => {
     // Retry logic before redirecting to login
     const retrySession = async () => {
-      if (!sessionContext.loading && !sessionContext.doesSessionExist && !user && retryCount < 3) {
+      if (
+        !sessionContext.loading &&
+        !sessionContext.doesSessionExist &&
+        !user &&
+        retryCount < 3
+      ) {
         try {
           // Attempt refreshing the session
           await Session.attemptRefreshingSession();
-          
+
           // Increment retry count after attempting to refresh the session
           setRetryCount(retryCount + 1);
         } catch (error) {
