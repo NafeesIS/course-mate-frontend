@@ -18,7 +18,7 @@ export const frontendConfig = () => {
     appName: config.APP_NAME,
     apiDomain: config.SUPERTOKENS_CONNECTION_URI || "http://localhost:4000", // Default to localhost
     websiteDomain: config.WEBSITE_URL || "http://localhost:3000", // Default to localhost
-    apiBasePath: "/auth",
+    apiBasePath: "api/v1/auth",
     websiteBasePath: "/auth",
   };
 
