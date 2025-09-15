@@ -4,20 +4,20 @@
  */
 
 // Determine if we're in production
-const isProduction = process.env.NODE_ENV === 'production';
+// const isProduction = process.env.NODE_ENV === 'production';
 
 export const config = {
   // API Configuration
-  API_URL: isProduction ? process.env.NEXT_PUBLIC_API_URL : "http://localhost:4000/api/v1",
-  WEBSITE_URL: isProduction ? process.env.NEXT_PUBLIC_WEBSITE_URL : "http://localhost:3000",
+  API_URL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1",
+  WEBSITE_URL: process.env.NEXT_PUBLIC_WEBSITE_URL || "http://localhost:3000",
   
   // SuperTokens Configuration
-  SUPERTOKENS_CONNECTION_URI: isProduction ? process.env.NEXT_PUBLIC_SUPERTOKENS_CONNECTION_URI : "http://localhost:4000",
+  SUPERTOKENS_CONNECTION_URI:  process.env.NEXT_PUBLIC_SUPERTOKENS_CONNECTION_URI || "http://localhost:4000",
   APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || "Course Mate",
   
   // Environment
-  IS_PRODUCTION: isProduction,
-  IS_DEVELOPMENT: !isProduction,
+  // IS_PRODUCTION: isProduction,
+  // IS_DEVELOPMENT: !isProduction,
   
   // API Endpoints
   ENDPOINTS: {
@@ -65,7 +65,7 @@ export const validateConfig = () => {
 };
 
 // Initialize configuration validation in development
-if (config.IS_DEVELOPMENT) {
+if (config) {
   try {
     validateConfig();
     console.log('✅ Configuration validated successfully');

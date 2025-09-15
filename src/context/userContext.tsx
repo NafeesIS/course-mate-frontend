@@ -202,7 +202,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
    * Debug logging in development
    */
   useEffect(() => {
-    if (config.IS_DEVELOPMENT) {
+    if (config) {
       console.log('UserContext State:', {
         user: user ? { id: user._id, email: user.email, role: user?.roles?.includes('admin') ? 'admin' : 'user'  } : null,
         loading,
