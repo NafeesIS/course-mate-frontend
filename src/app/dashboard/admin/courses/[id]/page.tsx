@@ -370,7 +370,7 @@ function CourseContentPage() {
     }
   };
 
-  const startEditingLecture = (lecture: Lecture,id:string) => {
+  const startEditingLecture = (lecture: Lecture, id: string) => {
     setShowLectureForm(id);
     setExpandedModule(id);
     setLectureForm({
