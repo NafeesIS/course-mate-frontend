@@ -201,17 +201,17 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   /**
    * Debug logging in development
    */
-  useEffect(() => {
-    if (config) {
-      console.log('UserContext State:', {
-        user: user ? { id: user._id, email: user.email, role: user?.roles?.includes('admin') ? 'admin' : 'user'  } : null,
-        loading,
-        error,
-       sessionExists: !sessionContext.loading ? sessionContext.doesSessionExist : null,
-        sessionLoading: sessionContext.loading,
-      });
-    }
-  }, [user, loading, error, sessionContext]);
+  // useEffect(() => {
+  //   if (config) {
+  //     console.log('UserContext State:', {
+  //       user: user ? { id: user._id, email: user.email, role: user?.roles?.includes('admin') ? 'admin' : 'user'  } : null,
+  //       loading,
+  //       error,
+  //      sessionExists: !sessionContext.loading ? sessionContext.doesSessionExist : null,
+  //       sessionLoading: sessionContext.loading,
+  //     });
+  //   }
+  // }, [user, loading, error, sessionContext]);
 
   const contextValue: UserContextType = {
     user,
