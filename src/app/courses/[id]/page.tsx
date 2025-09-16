@@ -29,7 +29,7 @@ export default function CourseDetailsPage() {
   const router = useRouter();
   const { user } = useUser();
   const sessionContext = useSessionContext();
-  const courseId = params.id as string;
+  const courseId = params.id as any;
 
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<ModuleWithLectures[]>([]);
@@ -415,7 +415,7 @@ export default function CourseDetailsPage() {
                   ) : isEnrolled ? (
                     <div className="space-y-3">
                       <Link
-                        href={`/learn/${courseId}`}
+                        href={`/learn/${courseId._id}`}
                         className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold text-center block"
                       >
                         Continue Learning
